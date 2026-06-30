@@ -745,36 +745,70 @@ app.post('/api/open-vscode', async (req, res) => {
   });
 });
 
-app.post('/api/install-rg', async (req, res) => {
+app.post('/api/install-rg', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
   const platform = os.platform();
-  let result;
-
+  let command, args;
   if (platform === 'win32') {
-    result = await runCommand(
-      'winget',
-      ['install', 'BurntSushi.ripgrep.MSVC', '--accept-source-agreements', '--accept-package-agreements'],
-      { timeoutMs: 120000 }
-    );
+    command = 'winget';
+    args = ['install', 'BurntSushi.ripgrep.MSVC', '--accept-source-agreements', '--accept-package-agreements'];
   } else if (platform === 'darwin') {
-    result = await runCommand('brew', ['install', 'ripgrep'], { timeoutMs: 120000 });
+    command = 'brew';
+    args = ['install', 'ripgrep'];
   } else {
-    result = await runCommand('apt-get', ['install', '-y', 'ripgrep'], { timeoutMs: 120000 });
+    command = 'apt-get';
+    args = ['install', '-y', 'ripgrep'];
   }
 
-  if (!result.ok) {
-    return sendJson(res, 500, { ok: false, message: result.stderr || result.stdout || 'Installation failed.' });
-  }
+  const send = (event, data) => {
+    if (!res.writableEnded) res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
 
-  const verify = await runCommand('rg', ['--version']);
-  sendJson(res, 200, {
-    ok: verify.ok,
-    installed: true,
-    needsRestart: !verify.ok,
-    message: verify.ok
-      ? 'ripgrep installed successfully.'
-      : 'Installed but rg not found in PATH yet — restart the server.',
-    rgVersion: verify.ok ? verify.stdout.split(/\r?\n/)[0] : null
+  const child = spawn(command, args, { shell: false, windowsHide: true, env: process.env });
+
+  const emitLines = (chunk) => {
+    chunk.toString('utf8').split(/\r?\n/).forEach((line) => {
+      if (line.trim()) send('log', { line });
+    });
+  };
+
+  child.stdout.on('data', emitLines);
+  child.stderr.on('data', emitLines);
+
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    child.kill();
+    send('done', { ok: false, message: 'Installation timed out after 2 minutes.' });
+    res.end();
+  }, 120000);
+
+  child.on('error', (err) => {
+    clearTimeout(timer);
+    send('done', { ok: false, message: err.message });
+    res.end();
   });
+
+  child.on('close', async (code) => {
+    if (timedOut) return;
+    clearTimeout(timer);
+    const verify = await runCommand('rg', ['--version']);
+    send('done', {
+      ok: verify.ok,
+      needsRestart: !verify.ok,
+      message: verify.ok
+        ? 'ripgrep installed successfully.'
+        : 'Installed but rg not found in PATH yet — restart the server.',
+      rgVersion: verify.ok ? verify.stdout.split(/\r?\n/)[0] : null
+    });
+    res.end();
+  });
+
+  req.on('close', () => { clearTimeout(timer); child.kill(); });
 });
 
 app.listen(PORT, HOST, () => {

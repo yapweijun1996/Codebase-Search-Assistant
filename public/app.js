@@ -544,20 +544,52 @@ async function checkHealth() {
 $('installRgBtn').addEventListener('click', async () => {
   const btn = $('installRgBtn');
   const status = $('installRgStatus');
+  const log = $('installRgLog');
   btn.disabled = true;
   status.textContent = t('installing');
+  log.textContent = '';
+  log.style.display = 'block';
+
   try {
     const res = await fetch('/api/install-rg', { method: 'POST' });
-    const data = await res.json().catch(() => ({}));
-    if (data.ok) {
-      status.textContent = t('installOk');
-      setTimeout(() => location.reload(), 1500);
-    } else if (data.needsRestart) {
-      status.textContent = t('installRestart');
-      btn.disabled = false;
-    } else {
-      status.textContent = t('installFail', { msg: data.message || 'unknown error' });
-      btn.disabled = false;
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+
+      for (const block of parts) {
+        let event = 'message';
+        let dataStr = '';
+        for (const line of block.split('\n')) {
+          if (line.startsWith('event: ')) event = line.slice(7).trim();
+          else if (line.startsWith('data: ')) dataStr = line.slice(6).trim();
+        }
+        if (!dataStr) continue;
+        const data = JSON.parse(dataStr);
+
+        if (event === 'log') {
+          log.textContent += data.line + '\n';
+          log.scrollTop = log.scrollHeight;
+        } else if (event === 'done') {
+          if (data.ok) {
+            status.textContent = t('installOk');
+            setTimeout(() => location.reload(), 2000);
+          } else if (data.needsRestart) {
+            status.textContent = t('installRestart');
+            btn.disabled = false;
+          } else {
+            status.textContent = t('installFail', { msg: data.message || 'unknown error' });
+            btn.disabled = false;
+          }
+        }
+      }
     }
   } catch (err) {
     status.textContent = t('installFail', { msg: err.message });
