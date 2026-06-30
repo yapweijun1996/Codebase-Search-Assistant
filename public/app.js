@@ -5,6 +5,7 @@ const languageSelect = $('languageSelect');
 
 const savedRoot = localStorage.getItem('codeSearchRoot') || '';
 const savedLanguage = localStorage.getItem('codeSearchLang') || 'en';
+const savedMaxFiles = localStorage.getItem('codeSearchMaxFiles') || '100';
 rootInput.value = savedRoot;
 
 const translations = {
@@ -65,6 +66,8 @@ const translations = {
     serverOffline: 'Server offline',
     stoppedEarly: 'Stopped early to protect disk. Narrow folder or keyword.',
     limitedResults: 'Limited results',
+    fileLimited: 'Showing first {n} files — increase limit or narrow search',
+    filesFound: '{n} files',
     duration: '{ms} ms',
     noFolders: 'No folders found.',
     nativePickerFallback: 'Native picker unavailable. Using built-in browser.',
@@ -134,6 +137,8 @@ const translations = {
     duration: '{ms} 毫秒',
     noFolders: '没有找到目录。',
     nativePickerFallback: '系统选择窗口不可用，改用内置目录浏览。',
+    fileLimited: '只显示前 {n} 个文件 — 增大限制或缩小搜索范围',
+    filesFound: '{n} 个文件',
     autoInstall: '自动安装 ripgrep',
     installing: '安装中...（最多需要 2 分钟）',
     installOk: '安装成功！正在刷新...',
@@ -456,7 +461,8 @@ async function runSearch() {
         caseSensitive: $('caseSensitive').checked,
         deepSearch: $('deepSearch').checked,
         context: Number($('contextSelect').value),
-        maxResults: 300
+        maxResults: 300,
+        maxFiles: Number($('maxFilesSelect').value)
       }),
       signal: controller.signal
     });
@@ -505,11 +511,13 @@ async function runSearch() {
           }
           const summary = [
             { text: t('matches', { count: data.count }) },
+            { text: t('filesFound', { n: data.fileCount || liveCount }) },
             { text: data.modules && data.modules.length ? data.modules.join(', ') : t('noModuleInferred') }
           ];
           const durationText = formatDuration(data.durationMs);
           if (durationText) summary.push({ text: durationText });
           if (data.timedOut) summary.push({ text: t('stoppedEarly'), level: 'MEDIUM' });
+          else if (data.fileTruncated) summary.push({ text: t('fileLimited', { n: data.fileCount }), level: 'MEDIUM' });
           else if (data.truncated) summary.push({ text: t('limitedResults'), level: 'MEDIUM' });
           toastSummary('searchSummary', summary);
           if (!liveCount) resultsDiv.innerHTML = `<div class="error">${escapeHtml(t('noResults'))}</div>`;
@@ -694,6 +702,16 @@ $('installRgBtn').addEventListener('click', async () => {
     btn.disabled = false;
   }
 });
+
+// restore max-files preference
+const maxFilesSelect = $('maxFilesSelect');
+if (maxFilesSelect) {
+  const opt = maxFilesSelect.querySelector(`option[value="${savedMaxFiles}"]`);
+  if (opt) opt.selected = true;
+  maxFilesSelect.addEventListener('change', () => {
+    localStorage.setItem('codeSearchMaxFiles', maxFilesSelect.value);
+  });
+}
 
 applyI18n();
 loadConfig();

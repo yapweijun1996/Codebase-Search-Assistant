@@ -568,7 +568,7 @@ app.post('/api/reveal-folder', async (req, res) => {
 
 app.post('/api/search', (req, res) => {
   const startedAt = Date.now();
-  const { root, query, globs, caseSensitive, context, maxResults, deepSearch } = req.body || {};
+  const { root, query, globs, caseSensitive, context, maxResults, maxFiles, deepSearch } = req.body || {};
   if (!query || !String(query).trim()) return res.status(400).json({ ok: false, message: 'Search keyword is required.' });
 
   const rootCheck = validateRoot(root);
@@ -585,6 +585,7 @@ app.post('/api/search', (req, res) => {
   };
 
   const maxRes = Number.isFinite(Number(maxResults)) ? Math.max(1, Math.min(Number(maxResults), 1000)) : 300;
+  const maxFilesLimit = Number(maxFiles) > 0 ? Math.min(Number(maxFiles), 2000) : Infinity;
   const args = buildRgArgs({
     query: String(query).trim(), globs, caseSensitive: !!caseSensitive, context, deepSearch: !!deepSearch
   });
@@ -593,8 +594,10 @@ app.post('/api/search', (req, res) => {
   let stderr = '';
   let count = 0;
   let killedByLimit = false;
+  let killedByFileLimit = false;
   let settled = false;
   const allResults = [];
+  const uniqueFiles = new Set();
 
   const child = spawn('rg', args, { cwd: resolvedRoot, shell: false, windowsHide: true, env: process.env });
 
@@ -603,7 +606,12 @@ app.post('/api/search', (req, res) => {
     settled = true;
     clearTimeout(timer);
     req.off('close', onClose);
-    send('done', { ...payload, modules: inferModulesFromResults(allResults), durationMs: Date.now() - startedAt });
+    send('done', {
+      ...payload,
+      fileCount: uniqueFiles.size,
+      modules: inferModulesFromResults(allResults),
+      durationMs: Date.now() - startedAt
+    });
     res.end();
   };
 
@@ -622,6 +630,14 @@ app.post('/api/search', (req, res) => {
     for (const line of lines) {
       const item = parseRgJsonLine(line, resolvedRoot);
       if (!item) continue;
+      if (!uniqueFiles.has(item.relativePath)) {
+        if (uniqueFiles.size >= maxFilesLimit) {
+          killedByFileLimit = true;
+          child.kill();
+          return;
+        }
+        uniqueFiles.add(item.relativePath);
+      }
       allResults.push(item);
       count++;
       send('result', item);
@@ -638,8 +654,14 @@ app.post('/api/search', (req, res) => {
   child.on('close', (code) => {
     if (pending) {
       const item = parseRgJsonLine(pending, resolvedRoot);
-      if (item && count < maxRes) { allResults.push(item); count++; send('result', item); }
+      if (item && !uniqueFiles.has(item.relativePath) && uniqueFiles.size < maxFilesLimit && count < maxRes) {
+        uniqueFiles.add(item.relativePath);
+        allResults.push(item);
+        count++;
+        send('result', item);
+      }
     }
+    if (killedByFileLimit) return finish({ ok: true, count, truncated: true, fileTruncated: true });
     if (killedByLimit) return finish({ ok: true, count, truncated: true });
     const rgMissing = /ENOENT|not found|not recognized/i.test(stderr);
     finish({ ok: code === 0 || code === 1, count, truncated: false, rgMissing, stderr: stderr || null });
