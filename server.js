@@ -101,6 +101,18 @@ function safeListDirectories(targetPath) {
   };
 }
 
+async function refreshWindowsPath() {
+  const result = await new Promise((resolve) => {
+    execFile('powershell.exe', [
+      '-NoProfile', '-Command',
+      '[System.Environment]::GetEnvironmentVariable("PATH","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH","User")'
+    ], { windowsHide: true, timeout: 8000 }, (err, stdout) => {
+      resolve(err ? null : String(stdout || '').trim());
+    });
+  });
+  if (result) process.env.PATH = result;
+}
+
 function runExecFile(command, args, options = {}) {
   return new Promise((resolve) => {
     execFile(command, args, { windowsHide: false, timeout: options.timeoutMs || 0 }, (err, stdout, stderr) => {
@@ -466,7 +478,11 @@ async function searchWithRg(root, params, signal) {
 }
 
 app.get('/api/health', async (req, res) => {
-  const rg = await runCommand('rg', ['--version']);
+  let rg = await runCommand('rg', ['--version']);
+  if (!rg.ok && os.platform() === 'win32') {
+    await refreshWindowsPath();
+    rg = await runCommand('rg', ['--version']);
+  }
   res.json({
     ok: true,
     platform: os.platform(),
@@ -796,6 +812,7 @@ app.post('/api/install-rg', (req, res) => {
   child.on('close', async (code) => {
     if (timedOut) return;
     clearTimeout(timer);
+    if (os.platform() === 'win32') await refreshWindowsPath();
     const verify = await runCommand('rg', ['--version']);
     send('done', {
       ok: verify.ok,
