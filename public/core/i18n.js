@@ -86,7 +86,7 @@ export const translations = {
     settingMaxFilesizeHint: 'Skip files larger than this size.',
     settingsReset: 'Reset defaults',
     settingsSave: 'Save',
-    copyForAI: '📋 Copy for AI',
+    copyForAI: 'Copy for AI',
     regexMode: 'Regex',
     presetLabel: 'Presets',
     presetFrontend: 'Frontend',
@@ -96,7 +96,7 @@ export const translations = {
     excludePaths: 'Exclude paths',
     excludeHint: 'e.g. *test*, archive/**',
     excludeHintDetail: 'Comma/space-separated globs',
-    hideSidebar: '◀ Hide',
+    hideSidebar: 'Hide',
     showSidebar: '▶'
   },
   zh: {
@@ -182,7 +182,7 @@ export const translations = {
     settingMaxFilesizeHint: '跳过超过此大小的文件。',
     settingsReset: '恢复默认',
     settingsSave: '保存',
-    copyForAI: '📋 复制给 AI',
+    copyForAI: '复制给 AI',
     regexMode: '正则',
     presetLabel: '文件预设',
     presetFrontend: '前端',
@@ -192,7 +192,7 @@ export const translations = {
     excludePaths: '排除路径',
     excludeHint: '例如 *test*, archive/**',
     excludeHintDetail: '逗号/空格分隔的 glob 模式',
-    hideSidebar: '◀ 隐藏',
+    hideSidebar: '隐藏',
     showSidebar: '▶'
   }
 };
@@ -229,7 +229,7 @@ export const TOOLTIPS = {
     copyImpactBtn:    'Copy for AI — copies the impact report (target, risk, modules, call sites) as markdown for AI-assisted code review.',
     copyGitBtn:       'Copy for AI — copies the git risk brief (changed files, risk scores, suggested tests) as markdown for AI-assisted review.',
     darkModeBtn:      'Dark mode — toggle between light and dark UI theme. Preference is saved in localStorage.',
-    collapseSidebarBtn: 'Hide sidebar — collapse the file-filter panel to gain more space. Click the ▶ button on the left edge to restore.',
+    collapseSidebarBtn: 'Hide sidebar — collapse the file-filter panel to gain more space. Click ☰ in the topbar to restore.',
     regexMode:        'Regex — when checked, the query is treated as a regular expression. Uncheck for fast literal/exact-string search (safer for most searches).',
     excludeInput:     'Exclude paths — comma or space-separated glob patterns to skip during search, e.g. *test*, archive/**. Applied on top of built-in exclusions.'
   },
@@ -262,7 +262,7 @@ export const TOOLTIPS = {
     copyImpactBtn:    '复制给 AI — 将影响报告（目标、风险、模块、引用位置）格式化为 Markdown，方便 AI 代码审查。',
     copyGitBtn:       '复制给 AI — 将 Git 风险摘要（修改文件、风险评级、建议测试）格式化为 Markdown，方便 AI 审查。',
     darkModeBtn:      '深色模式 — 切换浅色/深色 UI 主题，偏好保存在 localStorage。',
-    collapseSidebarBtn: '隐藏侧边栏 — 折叠文件过滤面板以获得更多空间。点击左侧 ▶ 按钮恢复。',
+    collapseSidebarBtn: '隐藏侧边栏 — 折叠文件过滤面板以获得更多空间。点击顶栏 ☰ 按钮恢复。',
     regexMode:        '正则模式 — 勾选后查询词作为正则表达式处理。不勾选则为字面/精确匹配（多数搜索更安全）。',
     excludeInput:     '排除路径 — 逗号/空格分隔的 glob 模式，搜索时跳过匹配路径，例如 *test*, archive/**。'
   }

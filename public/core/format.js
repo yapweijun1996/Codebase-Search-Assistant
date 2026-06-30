@@ -31,10 +31,10 @@ export async function copyToClipboard(text) {
 
 // Copy the text stashed on btn._copyText and briefly flash a confirmation.
 export async function flashCopy(btn) {
-  const orig = btn.textContent;
+  const origHTML = btn.innerHTML;
   const ok = await copyToClipboard(btn._copyText || '');
-  btn.textContent = ok ? '✓ Copied!' : '✗ Failed';
-  setTimeout(() => { btn.textContent = orig; }, 1800);
+  btn.textContent = ok ? 'Copied!' : 'Failed';
+  setTimeout(() => { btn.innerHTML = origHTML; }, 1800);
 }
 
 export function formatSearchForAI(store) {

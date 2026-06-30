@@ -10,7 +10,9 @@
 <body>
   <header class="app-header">
     <div class="topbar-left">
-      <button id="sidebarToggleBtn" class="btn icon-btn" title="Toggle navigation" aria-label="Toggle navigation">☰</button>
+      <button id="sidebarToggleBtn" class="btn icon-btn" title="Toggle navigation" aria-label="Toggle navigation">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
       <h1 class="topbar-title" data-i18n="appTitle">Codebase Search Assistant</h1>
       <button id="projectPill" class="project-pill" aria-label="Current project">
         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -27,8 +29,12 @@
         <option value="en">English</option>
         <option value="zh">中文</option>
       </select>
-      <button id="darkModeBtn" class="btn icon-btn" title="Toggle theme" aria-label="Toggle theme">🌙</button>
-      <button id="settingsBtn" class="btn icon-btn" title="Open settings" aria-label="Open settings">⚙</button>
+      <button id="darkModeBtn" class="btn icon-btn" title="Toggle theme" aria-label="Toggle theme">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button id="settingsBtn" class="btn icon-btn" title="Open settings" aria-label="Open settings">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
     </div>
   </header>
 
@@ -37,7 +43,10 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-top-bar">
         <label class="field-label" data-i18n="rootFolder">Project root folder</label>
-        <button id="collapseSidebarBtn" class="btn small-btn" title="Hide sidebar" data-i18n="hideSidebar">◀ Hide</button>
+        <button id="collapseSidebarBtn" class="btn small-btn" title="Hide sidebar">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          <span data-i18n="hideSidebar">Hide</span>
+        </button>
       </div>
       <input id="rootInput" class="input" list="rootSuggestions" placeholder="C:\\path\\to\\your\\project" />
       <datalist id="rootSuggestions"></datalist>
@@ -132,7 +141,10 @@
           </select>
           <button id="searchBtn" class="btn primary" data-i18n="search">Search</button>
           <button id="cancelSearchBtn" class="btn hidden" data-i18n="cancel">Cancel</button>
-          <button id="copySearchBtn" class="btn small-btn hidden" data-i18n="copyForAI">📋 Copy for AI</button>
+          <button id="copySearchBtn" class="btn small-btn hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+            <span data-i18n="copyForAI">Copy for AI</span>
+          </button>
         </div>
         <div id="searchHistory" class="search-history"></div>
         <div id="searchSummary" class="summary"></div>
@@ -144,7 +156,10 @@
           <input id="impactInput" class="input grow" data-i18n-placeholder="impactPlaceholder" placeholder="Target file/function, e.g. inc_common.cfm or calculateAmount" />
           <button id="impactBtn" class="btn primary" data-i18n="analyzeImpact">Analyze Impact</button>
           <button id="cancelImpactBtn" class="btn hidden" data-i18n="cancel">Cancel</button>
-          <button id="copyImpactBtn" class="btn small-btn hidden" data-i18n="copyForAI">📋 Copy for AI</button>
+          <button id="copyImpactBtn" class="btn small-btn hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+            <span data-i18n="copyForAI">Copy for AI</span>
+          </button>
         </div>
         <div id="impactSummary" class="summary"></div>
         <div id="impactResults" class="results"></div>
@@ -154,7 +169,10 @@
         <div class="toolbar">
           <button id="gitRiskBtn" class="btn primary" data-i18n="scanGit">Scan Current Git Changes</button>
           <button id="cancelGitBtn" class="btn hidden" data-i18n="cancel">Cancel</button>
-          <button id="copyGitBtn" class="btn small-btn hidden" data-i18n="copyForAI">📋 Copy for AI</button>
+          <button id="copyGitBtn" class="btn small-btn hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+            <span data-i18n="copyForAI">Copy for AI</span>
+          </button>
           <span class="muted"><span data-i18n="uses">Uses</span> <code>git diff --name-only HEAD</code></span>
         </div>
         <div id="gitSummary" class="summary"></div>
@@ -163,20 +181,7 @@
     </section>
   </main>
 
-  <template id="resultTemplate">
-    <article class="result-card">
-      <div class="result-head">
-        <div>
-          <strong class="path"></strong>
-          <span class="line-number"></span>
-        </div>
-        <button class="btn small-btn open-btn" data-i18n="openVscode">Open VS Code</button>
-      </div>
-      <pre class="code-line"></pre>
-    </article>
-  </template>
-
-  <div id="tooltip" class="tooltip" role="tooltip"></div>
+<div id="tooltip" class="tooltip" role="tooltip"></div>
   <div id="settingsModal" class="modal-overlay hidden">
     <div class="modal">
       <h2 data-i18n="settingsTitle">Search Settings</h2>

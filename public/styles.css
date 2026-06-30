@@ -153,6 +153,11 @@ body {
   padding: 10px 12px;
   cursor: pointer;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: inherit;
+  font-size: inherit;
 }
 .btn:hover { border-color: var(--primary); }
 .btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
@@ -285,7 +290,7 @@ code {
 .match-count { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .line-row {
   display: grid;
-  grid-template-columns: 64px 1fr auto;
+  grid-template-columns: 64px 1fr;
   align-items: stretch;
   border-top: 1px solid var(--border);
 }
@@ -311,7 +316,7 @@ code {
   white-space: pre-wrap;
   font-size: 13px;
 }
-.line-row .open-btn { margin: 6px; align-self: center; }
+
 .toggle-btn {
   width: 100%;
   border: none;

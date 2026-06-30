@@ -111,18 +111,8 @@ export function mountContent() {
     codeLine.className = 'code-line';
     renderCodeLine(codeLine, item.line || '', item.submatches);
 
-    const openBtn = document.createElement('button');
-    openBtn.className = 'btn small-btn open-btn';
-    openBtn.textContent = t('openVscode');
-    openBtn.addEventListener('click', async () => {
-      try {
-        await api.openVscode({ root: $('rootInput').value, filePath: item.path, lineNumber: item.lineNumber });
-      } catch (err) { alert(err.message); }
-    });
-
     row.appendChild(lineNum);
     row.appendChild(codeLine);
-    row.appendChild(openBtn);
     group.linesEl.appendChild(row);
     updateToggle(group);
   }
