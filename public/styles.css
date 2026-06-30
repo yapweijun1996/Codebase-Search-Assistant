@@ -48,6 +48,12 @@ body {
 }
 .status.bad { background: #fee2e2; color: #991b1b; }
 .status.good { background: #dcfce7; color: #166534; }
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
 .header-actions {
   display: flex;
   align-items: center;
@@ -401,21 +407,6 @@ code {
 .sidebar-top-bar .field-label { margin-bottom: 0; }
 .layout.sidebar-hidden { margin-left: 0; }
 .layout.sidebar-hidden .sidebar { transform: translateX(-100%); }
-.sidebar-expand-btn {
-  position: fixed;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 200;
-  border-radius: 0 8px 8px 0;
-  border-left: none;
-  padding: 14px 7px;
-  font-size: 13px;
-  font-weight: 700;
-  writing-mode: vertical-rl;
-  letter-spacing: 1px;
-  box-shadow: 2px 0 8px rgba(0,0,0,.12);
-}
 
 /* ─── Sidebar backdrop (mobile overlay) ─────────────────────────────────────── */
 .sidebar-backdrop {
@@ -478,7 +469,6 @@ code {
 .dark .history-chip { background: #1e293b; border-color: var(--border); }
 .dark .result-card { border-color: var(--border); }
 .dark .result-head { background: #111827; }
-.dark .sidebar-expand-btn { background: #1e293b; color: var(--text); border-color: var(--border); }
 .dark .sidebar-backdrop { background: rgba(0,0,0,.65); }
 .dark .error { background: #3b0f0f; border-color: #7f1d1d; color: #fca5a5; }
 
@@ -496,12 +486,9 @@ code {
   /* Sidebar closed on mobile: slide out */
   .layout.sidebar-hidden .sidebar { transform: translateX(-100%); }
 
-  /* Hide the desktop fixed-edge expand button on mobile */
-  .sidebar-expand-btn { display: none !important; }
-
   /* Mobile topbar: truncate title, keep actions on one row */
   .app-header { overflow: hidden; padding: 0 12px; gap: 8px; }
-  .app-header > div { min-width: 0; flex: 1 1 0; overflow: hidden; }
+  .header-title { flex: 1 1 0; overflow: hidden; min-width: 0; }
   .app-header h1 { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .header-actions { flex-shrink: 0; flex-wrap: nowrap; gap: 6px; }
   #statusBox { display: none; }

@@ -9,12 +9,11 @@
 </head>
 <body>
   <header class="app-header">
-    <div>
+    <div class="header-title">
+      <button id="sidebarToggleBtn" class="btn icon-btn" title="Toggle sidebar" aria-label="Toggle sidebar">☰</button>
       <h1 data-i18n="appTitle">Codebase Search Assistant</h1>
-      <p data-i18n="appSubtitle">Fast local search, impact check, and Git risk scan for any local project.</p>
     </div>
     <div class="header-actions">
-      <button id="sidebarToggleBtn" class="btn icon-btn" title="Toggle sidebar" aria-label="Toggle sidebar">☰</button>
       <select id="languageSelect" class="input small" aria-label="Language">
         <option value="en">English</option>
         <option value="zh">中文</option>
@@ -155,8 +154,6 @@
       </section>
     </section>
   </main>
-
-  <button id="expandSidebarBtn" class="btn sidebar-expand-btn hidden" title="Show sidebar" data-i18n="showSidebar">▶</button>
 
   <template id="resultTemplate">
     <article class="result-card">

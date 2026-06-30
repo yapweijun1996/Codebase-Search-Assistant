@@ -23,7 +23,6 @@ export function mountSidebar() {
   const folderBrowser = $('folderBrowser');
   const upBtn = $('upFolderBtn');
   const rgHintCard = $('rgHintCard');
-  const expandBtn = $('expandSidebarBtn');
   const backdrop = $('sidebarBackdrop');
   const installBtn = $('installRgBtn');
   const installStatus = $('installRgStatus');
@@ -137,7 +136,6 @@ export function mountSidebar() {
   });
 
   $('collapseSidebarBtn').addEventListener('click', () => actions.setSidebarHidden(true));
-  expandBtn.addEventListener('click', () => actions.setSidebarHidden(false));
   backdrop.addEventListener('click', () => actions.setSidebarHidden(true));
 
   installBtn.addEventListener('click', async () => {
@@ -172,7 +170,6 @@ export function mountSidebar() {
   // ── Reactive (collapse state + rg hint visibility) ─────────────────────────
   function update(state) {
     $('layout').classList.toggle('sidebar-hidden', state.sidebarHidden);
-    expandBtn.classList.toggle('hidden', !state.sidebarHidden);
     rgHintCard.style.display = state.health.phase === 'bad' ? '' : 'none';
 
     const isMobile = MOBILE_MQ.matches;
