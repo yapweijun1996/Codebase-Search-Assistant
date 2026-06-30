@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "codebase-search",
-      "runtimeExecutable": "node",
-      "runtimeArgs": ["server.js"],
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start"],
       "port": 3123,
       "autoPort": false
     }
