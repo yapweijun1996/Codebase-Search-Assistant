@@ -17,15 +17,20 @@
         <option value="en">English</option>
         <option value="zh">中文</option>
       </select>
+      <button id="darkModeBtn" class="btn icon-btn" title="Toggle dark mode">🌙</button>
       <button id="settingsBtn" class="btn icon-btn" title="Settings">⚙</button>
       <div class="status" id="statusBox" data-i18n="checking">Checking...</div>
     </div>
   </header>
 
-  <main class="layout">
-    <aside class="sidebar">
-      <label class="field-label" data-i18n="rootFolder">Project root folder</label>
-      <input id="rootInput" class="input" placeholder="C:\\path\\to\\your\\project" />
+  <main class="layout" id="layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-top-bar">
+        <label class="field-label" data-i18n="rootFolder">Project root folder</label>
+        <button id="collapseSidebarBtn" class="btn small-btn" title="Hide sidebar" data-i18n="hideSidebar">◀ Hide</button>
+      </div>
+      <input id="rootInput" class="input" list="rootSuggestions" placeholder="C:\\path\\to\\your\\project" />
+      <datalist id="rootSuggestions"></datalist>
       <div class="button-row">
         <button id="browseRootBtn" class="btn full" data-i18n="browseFolder">Browse</button>
         <button id="openRootBtn" class="btn full" data-i18n="openFolder">Open</button>
@@ -62,6 +67,23 @@
         <label><input type="checkbox" class="glob" value="*.yaml" checked /> .yaml</label>
       </div>
 
+      <div class="preset-card">
+        <span class="preset-card-head" data-i18n="presetLabel">Presets</span>
+        <div class="preset-btns">
+          <button class="btn small-btn preset-btn" data-preset="frontend" data-i18n="presetFrontend">Frontend</button>
+          <button class="btn small-btn preset-btn" data-preset="backend" data-i18n="presetBackend">Backend</button>
+          <button class="btn small-btn preset-btn" data-preset="config" data-i18n="presetConfig">Config</button>
+          <button class="btn small-btn preset-btn" data-preset="all" data-i18n="presetAll">All</button>
+        </div>
+      </div>
+
+      <div class="filter-card" style="margin-top:10px">
+        <label class="field-label" style="font-size:13px" data-i18n="excludePaths">Exclude paths</label>
+        <input id="excludeInput" class="input" style="font-size:12px"
+               data-i18n-placeholder="excludeHint" placeholder="e.g. *test*, archive/**" />
+        <span class="muted" style="font-size:11px;display:block;margin-top:4px" data-i18n="excludeHintDetail">Comma/space-separated globs</span>
+      </div>
+
       <div class="hint-card" id="rgHintCard" style="display:none">
         <strong data-i18n="recommended">Recommended</strong>
         <p data-i18n="installRg">Install ripgrep first:</p>
@@ -83,6 +105,7 @@
         <div class="toolbar">
           <input id="searchInput" class="input grow" data-i18n-placeholder="searchPlaceholder" placeholder="Search keyword, e.g. function name, route, table" />
           <label class="inline"><input id="caseSensitive" type="checkbox" /> <span data-i18n="caseSensitive">Case sensitive</span></label>
+          <label class="inline"><input id="regexMode" type="checkbox" /> <span data-i18n="regexMode">Regex</span></label>
           <label class="inline"><input id="deepSearch" type="checkbox" /> <span data-i18n="deepSearch">Deep search</span></label>
           <select id="contextSelect" class="input small">
             <option value="0" data-i18n="noContext">No context</option>
@@ -129,6 +152,8 @@
       </section>
     </section>
   </main>
+
+  <button id="expandSidebarBtn" class="btn sidebar-expand-btn hidden" title="Show sidebar" data-i18n="showSidebar">▶</button>
 
   <template id="resultTemplate">
     <article class="result-card">

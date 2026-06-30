@@ -128,7 +128,18 @@ const translations = {
     settingMaxFilesizeHint: 'Skip files larger than this size.',
     settingsReset: 'Reset defaults',
     settingsSave: 'Save',
-    copyForAI: '📋 Copy for AI'
+    copyForAI: '📋 Copy for AI',
+    regexMode: 'Regex',
+    presetLabel: 'Presets',
+    presetFrontend: 'Frontend',
+    presetBackend: 'Backend',
+    presetConfig: 'Config',
+    presetAll: 'All',
+    excludePaths: 'Exclude paths',
+    excludeHint: 'e.g. *test*, archive/**',
+    excludeHintDetail: 'Comma/space-separated globs',
+    hideSidebar: '◀ Hide',
+    showSidebar: '▶'
   },
   zh: {
     appTitle: '代码库搜索助手',
@@ -208,7 +219,18 @@ const translations = {
     settingMaxFilesizeHint: '跳过超过此大小的文件。',
     settingsReset: '恢复默认',
     settingsSave: '保存',
-    copyForAI: '📋 复制给 AI'
+    copyForAI: '📋 复制给 AI',
+    regexMode: '正则',
+    presetLabel: '文件预设',
+    presetFrontend: '前端',
+    presetBackend: '后端',
+    presetConfig: '配置',
+    presetAll: '全部',
+    excludePaths: '排除路径',
+    excludeHint: '例如 *test*, archive/**',
+    excludeHintDetail: '逗号/空格分隔的 glob 模式',
+    hideSidebar: '◀ 隐藏',
+    showSidebar: '▶'
   }
 };
 
@@ -242,6 +264,10 @@ const TOOLTIPS = {
     copySearchBtn:    'Copy for AI — copies all search results as structured markdown ready to paste into Claude, ChatGPT, or any AI assistant.',
     copyImpactBtn:    'Copy for AI — copies the impact report (target, risk, modules, call sites) as markdown for AI-assisted code review.',
     copyGitBtn:       'Copy for AI — copies the git risk brief (changed files, risk scores, suggested tests) as markdown for AI-assisted review.',
+    darkModeBtn:      'Dark mode — toggle between light and dark UI theme. Preference is saved in localStorage.',
+    collapseSidebarBtn: 'Hide sidebar — collapse the file-filter panel to gain more space. Click the ▶ button on the left edge to restore.',
+    regexMode:        'Regex — when checked, the query is treated as a regular expression. Uncheck for fast literal/exact-string search (safer for most searches).',
+    excludeInput:     'Exclude paths — comma or space-separated glob patterns to skip during search, e.g. *test*, archive/**. Applied on top of built-in exclusions.',
   },
   zh: {
     languageSelect:   '语言 — 切换界面语言（English / 中文）。',
@@ -269,6 +295,10 @@ const TOOLTIPS = {
     copySearchBtn:    '复制给 AI — 将搜索结果格式化为 Markdown，可直接粘贴到 Claude、ChatGPT 等 AI 助手。',
     copyImpactBtn:    '复制给 AI — 将影响报告（目标、风险、模块、引用位置）格式化为 Markdown，方便 AI 代码审查。',
     copyGitBtn:       '复制给 AI — 将 Git 风险摘要（修改文件、风险评级、建议测试）格式化为 Markdown，方便 AI 审查。',
+    darkModeBtn:      '深色模式 — 切换浅色/深色 UI 主题，偏好保存在 localStorage。',
+    collapseSidebarBtn: '隐藏侧边栏 — 折叠文件过滤面板以获得更多空间。点击左侧 ▶ 按钮恢复。',
+    regexMode:        '正则模式 — 勾选后查询词作为正则表达式处理。不勾选则为字面/精确匹配（多数搜索更安全）。',
+    excludeInput:     '排除路径 — 逗号/空格分隔的 glob 模式，搜索时跳过匹配路径，例如 *test*, archive/**。',
   }
 };
 // ─────────────────────────────────────────────────────────────────────────────
@@ -317,7 +347,9 @@ languageSelect.addEventListener('change', () => {
 });
 
 $('saveRootBtn').addEventListener('click', () => {
-  localStorage.setItem('codeSearchRoot', rootInput.value.trim());
+  const root = rootInput.value.trim();
+  localStorage.setItem('codeSearchRoot', root);
+  pushRecentRoot(root);
   toastSummary('searchSummary', [{ text: t('folderSaved') }]);
 });
 
@@ -327,6 +359,7 @@ $('browseRootBtn').addEventListener('click', async () => {
     if (data.canceled) return;
     rootInput.value = data.path;
     localStorage.setItem('codeSearchRoot', rootInput.value.trim());
+    pushRecentRoot(rootInput.value.trim());
     $('folderBrowser').classList.add('hidden');
     toastSummary('searchSummary', [{ text: t('folderSaved') }]);
   } catch (_) {
@@ -357,6 +390,7 @@ $('useFolderBtn').addEventListener('click', () => {
   if (!browserCurrentPath) return;
   rootInput.value = browserCurrentPath;
   localStorage.setItem('codeSearchRoot', rootInput.value.trim());
+  pushRecentRoot(rootInput.value.trim());
   $('folderBrowser').classList.add('hidden');
   toastSummary('searchSummary', [{ text: t('folderSaved') }]);
 });
@@ -726,6 +760,8 @@ async function runSearch() {
         globs: getGlobs(),
         caseSensitive: $('caseSensitive').checked,
         deepSearch: $('deepSearch').checked,
+        fixedStrings: !$('regexMode').checked,
+        excludePatterns: getExcludePatterns(),
         context: Number($('contextSelect').value),
         maxResults: searchSettings.maxResults,
         maxFilesize: searchSettings.maxFilesize,
@@ -1032,6 +1068,95 @@ function attachTooltips() {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── Exclude patterns helper ──────────────────────────────────────────────────
+function getExcludePatterns() {
+  const val = ($('excludeInput') || {}).value || '';
+  return val.trim().split(/[,\s]+/).map((p) => p.trim()).filter(Boolean);
+}
+
+// ─── Recent project roots ─────────────────────────────────────────────────────
+const ROOTS_KEY = 'codeSearchRecentRoots';
+const MAX_ROOTS = 5;
+
+function getRecentRoots() {
+  try { return JSON.parse(localStorage.getItem(ROOTS_KEY) || '[]'); } catch (_) { return []; }
+}
+
+function pushRecentRoot(root) {
+  if (!root || !root.trim()) return;
+  const roots = getRecentRoots().filter((r) => r !== root);
+  roots.unshift(root);
+  localStorage.setItem(ROOTS_KEY, JSON.stringify(roots.slice(0, MAX_ROOTS)));
+  renderRootSuggestions();
+}
+
+function renderRootSuggestions() {
+  const dl = $('rootSuggestions');
+  if (!dl) return;
+  dl.innerHTML = getRecentRoots().map((r) => `<option value="${escapeHtml(r)}">`).join('');
+}
+
+// ─── Dark mode ────────────────────────────────────────────────────────────────
+const DARK_KEY = 'codeSearchDark';
+let isDark = localStorage.getItem(DARK_KEY) === '1';
+
+function applyDarkMode() {
+  document.documentElement.classList.toggle('dark', isDark);
+  const btn = $('darkModeBtn');
+  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+}
+
+$('darkModeBtn').addEventListener('click', () => {
+  isDark = !isDark;
+  localStorage.setItem(DARK_KEY, isDark ? '1' : '0');
+  applyDarkMode();
+});
+
+// ─── Sidebar collapse ─────────────────────────────────────────────────────────
+const SIDEBAR_HIDDEN_KEY = 'codeSearchSidebarHidden';
+let sidebarHidden = localStorage.getItem(SIDEBAR_HIDDEN_KEY) === '1';
+
+function applySidebarState() {
+  const layout = $('layout');
+  if (layout) layout.classList.toggle('sidebar-hidden', sidebarHidden);
+  const expandBtn = $('expandSidebarBtn');
+  if (expandBtn) expandBtn.classList.toggle('hidden', !sidebarHidden);
+}
+
+$('collapseSidebarBtn').addEventListener('click', () => {
+  sidebarHidden = true;
+  localStorage.setItem(SIDEBAR_HIDDEN_KEY, '1');
+  applySidebarState();
+});
+
+$('expandSidebarBtn').addEventListener('click', () => {
+  sidebarHidden = false;
+  localStorage.setItem(SIDEBAR_HIDDEN_KEY, '0');
+  applySidebarState();
+});
+
+// ─── File type presets ────────────────────────────────────────────────────────
+const FILE_PRESETS = {
+  frontend: new Set(['*.js', '*.jsx', '*.ts', '*.tsx', '*.css', '*.html']),
+  backend:  new Set(['*.cfm', '*.cfc', '*.sql', '*.py', '*.java', '*.cs', '*.php', '*.rb', '*.go', '*.rs']),
+  config:   new Set(['*.json', '*.yml', '*.yaml', '*.md', '*.xml']),
+  all:      null
+};
+
+function applyPreset(presetKey) {
+  const allowed = FILE_PRESETS[presetKey];
+  document.querySelectorAll('.glob').forEach((cb) => {
+    cb.checked = allowed === null || allowed.has(cb.value);
+  });
+  document.querySelectorAll('.preset-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.preset === presetKey);
+  });
+}
+
+document.querySelectorAll('.preset-btn').forEach((btn) => {
+  btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+});
+
 // ─── Copy for AI button handlers ─────────────────────────────────────────────
 $('copySearchBtn').addEventListener('click', () => flashCopy($('copySearchBtn')));
 $('copyImpactBtn').addEventListener('click', () => flashCopy($('copyImpactBtn')));
@@ -1045,12 +1170,19 @@ $('searchHistory').addEventListener('click', (e) => {
   runSearch();
 });
 
-// ─── Esc to cancel any active request ────────────────────────────────────────
+// ─── Keyboard shortcuts ───────────────────────────────────────────────────────
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     ['search', 'impact', 'git'].forEach((type) => {
       if (activeRequests[type]) cancelRequest(type);
     });
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    const searchTab = document.querySelector('.tab[data-tab="search"]');
+    if (searchTab) searchTab.click();
+    const si = $('searchInput');
+    if (si) { si.focus(); si.select(); }
   }
 });
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1067,6 +1199,9 @@ if (maxFilesSelect) {
 
 if (savedQuery) $('searchInput').value = savedQuery;
 renderHistory();
+renderRootSuggestions();
+applyDarkMode();
+applySidebarState();
 attachTooltips();
 applyI18n();
 loadConfig();

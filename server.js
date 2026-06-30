@@ -267,7 +267,7 @@ function validateRoot(root) {
 
 const ALLOWED_FILESIZES = new Set(['500K', '1M', '5M', '10M']);
 
-function buildRgArgs({ query, globs, caseSensitive, context, deepSearch, maxFilesize }) {
+function buildRgArgs({ query, globs, caseSensitive, context, deepSearch, maxFilesize, fixedStrings, excludePatterns }) {
   const filesize = ALLOWED_FILESIZES.has(maxFilesize) ? maxFilesize : RG_MAX_FILESIZE;
   const args = [
     '--json',
@@ -300,11 +300,19 @@ function buildRgArgs({ query, globs, caseSensitive, context, deepSearch, maxFile
   if (caseSensitive) args.push('--case-sensitive');
   else args.push('--ignore-case');
 
+  if (fixedStrings) args.push('--fixed-strings');
+
   const ctx = Number.isFinite(Number(context)) ? Math.max(0, Math.min(Number(context), 5)) : 0;
   if (ctx > 0) args.push('--context', String(ctx));
 
   const selectedGlobs = Array.isArray(globs) && globs.length ? globs : DEFAULT_GLOBS;
   selectedGlobs.forEach((g) => args.push('--glob', g));
+
+  // user-supplied exclude patterns — strip anything with path traversal
+  const safeExcludes = Array.isArray(excludePatterns)
+    ? excludePatterns.filter((p) => p && p.trim() && !p.includes('..'))
+    : [];
+  safeExcludes.forEach((p) => args.push('--glob', `!${p.trim()}`));
 
   args.push(query);
   args.push('.');
@@ -572,7 +580,7 @@ app.post('/api/reveal-folder', async (req, res) => {
 
 app.post('/api/search', (req, res) => {
   const startedAt = Date.now();
-  const { root, query, globs, caseSensitive, context, maxResults, maxFiles, deepSearch, timeoutMs, maxFilesize } = req.body || {};
+  const { root, query, globs, caseSensitive, context, maxResults, maxFiles, deepSearch, timeoutMs, maxFilesize, fixedStrings, excludePatterns } = req.body || {};
   if (!query || !String(query).trim()) return res.status(400).json({ ok: false, message: 'Search keyword is required.' });
 
   const rootCheck = validateRoot(root);
@@ -592,7 +600,9 @@ app.post('/api/search', (req, res) => {
   const maxFilesLimit = Number(maxFiles) > 0 ? Math.min(Number(maxFiles), 2000) : Infinity;
   const sseTimeoutMs = Number.isFinite(Number(timeoutMs)) ? Math.max(3000, Math.min(Number(timeoutMs), 120000)) : COMMAND_TIMEOUT_MS;
   const args = buildRgArgs({
-    query: String(query).trim(), globs, caseSensitive: !!caseSensitive, context, deepSearch: !!deepSearch, maxFilesize
+    query: String(query).trim(), globs, caseSensitive: !!caseSensitive, context, deepSearch: !!deepSearch, maxFilesize,
+    fixedStrings: !!fixedStrings,
+    excludePatterns: Array.isArray(excludePatterns) ? excludePatterns : []
   });
 
   let pending = '';
