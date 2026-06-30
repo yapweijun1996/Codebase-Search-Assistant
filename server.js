@@ -142,7 +142,13 @@ function revealFolder(folderPath) {
   const platform = os.platform();
 
   if (platform === 'win32') {
-    return runExecFile('explorer.exe', [resolvedPath]);
+    // explorer.exe is single-instance — it hands off to the running instance and
+    // exits with a non-zero code immediately, which execFile wrongly treats as failure.
+    return new Promise((resolve) => {
+      const child = spawn('explorer.exe', [resolvedPath], { detached: true, stdio: 'ignore', windowsHide: false });
+      child.unref();
+      resolve({ ok: true });
+    });
   }
   if (platform === 'darwin') {
     return runExecFile('open', [resolvedPath]);
