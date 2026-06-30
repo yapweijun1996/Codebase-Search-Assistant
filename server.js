@@ -910,9 +910,20 @@ app.post('/api/install-rg', (req, res) => {
   res.on('close', () => { if (!res.writableEnded) { clearTimeout(timer); child.kill(); } });
 });
 
-app.listen(PORT, HOST, () => {
-  console.log(`Codebase Search Assistant running at http://${HOST}:${PORT}`);
-  if (ALLOWED_ROOTS.length) {
-    console.log(`Allowed roots: ${ALLOWED_ROOTS.join(path.delimiter)}`);
+async function start() {
+  // On Windows a tool like ripgrep is often added to PATH by its installer
+  // (winget) AFTER the launching shell captured its environment. Refresh PATH
+  // from the registry once at startup so search/health work without needing
+  // the user to reopen their terminal.
+  if (os.platform() === 'win32') {
+    await refreshWindowsPath();
   }
-});
+  app.listen(PORT, HOST, () => {
+    console.log(`Codebase Search Assistant running at http://${HOST}:${PORT}`);
+    if (ALLOWED_ROOTS.length) {
+      console.log(`Allowed roots: ${ALLOWED_ROOTS.join(path.delimiter)}`);
+    }
+  });
+}
+
+start();

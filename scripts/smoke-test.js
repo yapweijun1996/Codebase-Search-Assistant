@@ -15,6 +15,46 @@ async function fetchJson(url, options = {}) {
   return { res, data };
 }
 
+// Consume the Server-Sent-Events search stream: collect "result" items and the
+// final "done" payload.
+async function fetchSearch(body, options = {}) {
+  const res = await fetch(`${baseUrl}/api/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: options.signal
+  });
+  if (!res.ok) return { res, results: [], done: null };
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  const results = [];
+  let done = null;
+
+  while (true) {
+    const chunk = await reader.read();
+    if (chunk.done) break;
+    buffer += decoder.decode(chunk.value, { stream: true });
+    const parts = buffer.split('\n\n');
+    buffer = parts.pop();
+    for (const block of parts) {
+      let event = 'message';
+      let dataStr = '';
+      for (const line of block.split('\n')) {
+        if (line.startsWith('event: ')) event = line.slice(7).trim();
+        else if (line.startsWith('data: ')) dataStr = line.slice(6).trim();
+      }
+      if (!dataStr) continue;
+      let data;
+      try { data = JSON.parse(dataStr); } catch (_) { continue; }
+      if (event === 'result') results.push(data);
+      else if (event === 'done') done = data;
+    }
+  }
+  return { res, results, done };
+}
+
 async function waitForServer() {
   for (let i = 0; i < 30; i += 1) {
     try {
@@ -58,18 +98,17 @@ async function main() {
       maxResults: 5,
       deepSearch: false
     };
-    const search = await fetchJson(`${baseUrl}/api/search`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(searchBody)
-    });
-    if (!search.res.ok || !search.data.ok || search.data.count < 1) {
+    const search = await fetchSearch(searchBody);
+    if (!search.res.ok || !search.done || !search.done.ok || search.done.count < 1) {
       throw new Error('Search smoke test failed.');
     }
-    if (search.data.count > 5) {
+    if (search.done.count > 5) {
       throw new Error('Search global maxResults cap failed.');
     }
-    if (!Number.isFinite(search.data.durationMs)) {
+    if (search.results.length !== search.done.count) {
+      throw new Error('Streamed result count does not match done.count.');
+    }
+    if (!Number.isFinite(search.done.durationMs)) {
       throw new Error('Search durationMs missing.');
     }
 
@@ -82,20 +121,18 @@ async function main() {
       throw new Error('Browse smoke test failed.');
     }
 
-    const invalid = await fetchJson(`${baseUrl}/api/search`, {
+    const invalid = await fetch(`${baseUrl}/api/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...searchBody, root: path.join(root, '__missing__') })
     });
-    if (invalid.res.status !== 400) throw new Error('Invalid root should return 400.');
+    if (invalid.status !== 400) throw new Error('Invalid root should return 400.');
 
+    // Cancel mid-flight: abort should reject the fetch without hanging.
     const controller = new AbortController();
-    const cancelPromise = fetch(`${baseUrl}/api/search`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...searchBody, query: 'function', maxResults: 1000 }),
-      signal: controller.signal
-    }).catch((err) => err.name);
+    const cancelPromise = fetchSearch({ ...searchBody, query: 'function', maxResults: 1000 }, { signal: controller.signal })
+      .then(() => 'completed')
+      .catch((err) => err.name);
     controller.abort();
     await cancelPromise;
 
