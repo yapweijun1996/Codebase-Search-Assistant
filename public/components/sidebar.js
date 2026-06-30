@@ -43,6 +43,7 @@ export function mountSidebar() {
     storage.set(storage.KEYS.root, root);
     storage.pushRecentRoot(root);
     renderRootSuggestions();
+    actions.setRoot(root);
   }
 
   // ── Folder browser ─────────────────────────────────────────────────────────

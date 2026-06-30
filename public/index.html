@@ -9,18 +9,26 @@
 </head>
 <body>
   <header class="app-header">
-    <div class="header-title">
-      <button id="sidebarToggleBtn" class="btn icon-btn" title="Toggle sidebar" aria-label="Toggle sidebar">☰</button>
-      <h1 data-i18n="appTitle">Codebase Search Assistant</h1>
+    <div class="topbar-left">
+      <button id="sidebarToggleBtn" class="btn icon-btn" title="Toggle navigation" aria-label="Toggle navigation">☰</button>
+      <h1 class="topbar-title" data-i18n="appTitle">Codebase Search Assistant</h1>
+      <button id="projectPill" class="project-pill" aria-label="Current project">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <span id="projectPillText">No project</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
     </div>
-    <div class="header-actions">
-      <select id="languageSelect" class="input small" aria-label="Language">
+    <div class="topbar-right">
+      <div id="statusBox" class="status-pill" role="status" title="">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Checking</span>
+      </div>
+      <select id="languageSelect" class="input small" aria-label="Select language">
         <option value="en">English</option>
         <option value="zh">中文</option>
       </select>
-      <button id="darkModeBtn" class="btn icon-btn" title="Toggle dark mode">🌙</button>
-      <button id="settingsBtn" class="btn icon-btn" title="Settings">⚙</button>
-      <div class="status" id="statusBox">Checking...</div>
+      <button id="darkModeBtn" class="btn icon-btn" title="Toggle theme" aria-label="Toggle theme">🌙</button>
+      <button id="settingsBtn" class="btn icon-btn" title="Open settings" aria-label="Open settings">⚙</button>
     </div>
   </header>
 

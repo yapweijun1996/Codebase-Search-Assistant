@@ -20,6 +20,7 @@ const initialState = {
   language: storage.get(storage.KEYS.lang, 'en'),
   dark: storage.get(storage.KEYS.dark) === '1',
   sidebarHidden: isMobileInit ? true : storage.get(storage.KEYS.sidebarHidden) === '1',
+  root: storage.get(storage.KEYS.root, ''),
   health: { phase: 'checking', rgVersion: null }, // checking | good | bad | offline
   settings: loadSettings(),
   busy: { search: false, impact: false, git: false }
@@ -41,6 +42,9 @@ export const actions = {
   setSidebarHidden(sidebarHidden) {
     store.set({ sidebarHidden });
     storage.set(storage.KEYS.sidebarHidden, sidebarHidden ? '1' : '0');
+  },
+  setRoot(root) {
+    store.set({ root });
   },
   setHealth(health) {
     store.set({ health });

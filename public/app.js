@@ -50,7 +50,10 @@ async function loadConfig() {
   try {
     const data = await api.config();
     const rootInput = $('rootInput');
-    if (!rootInput.value && data.defaultRoot) rootInput.value = data.defaultRoot;
+    if (!rootInput.value && data.defaultRoot) {
+      rootInput.value = data.defaultRoot;
+      if (!store.get().root) actions.setRoot(data.defaultRoot);
+    }
   } catch (_) {
     // Non-fatal; health check surfaces server state.
   }

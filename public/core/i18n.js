@@ -58,6 +58,11 @@ export const translations = {
     ready: 'Ready - {value}',
     rgNotFound: 'rg not found',
     serverOffline: 'Server offline',
+    statusReady: 'Ready',
+    statusError: 'Error',
+    statusOffline: 'Offline',
+    statusChecking: 'Checking',
+    noProject: 'No project',
     stoppedEarly: 'Stopped early to protect disk. Narrow folder or keyword.',
     limitedResults: 'Limited results',
     fileLimited: 'Showing first {n} files — increase limit or narrow search',
@@ -149,6 +154,11 @@ export const translations = {
     ready: '就绪 - {value}',
     rgNotFound: '找不到 rg',
     serverOffline: '服务器离线',
+    statusReady: '就绪',
+    statusError: '错误',
+    statusOffline: '离线',
+    statusChecking: '检查中',
+    noProject: '未选择项目',
     stoppedEarly: '已提前停止以保护磁盘。请缩小目录或关键字。',
     limitedResults: '结果已限制',
     duration: '{ms} 毫秒',
@@ -191,8 +201,10 @@ export const translations = {
 // map to .tab[data-tab="<rest>"] buttons; all others map to element ids.
 export const TOOLTIPS = {
   en: {
+    sidebarToggleBtn: 'Toggle sidebar — show or hide the file-filter navigation panel.',
+    projectPill:      'Current project — click to open sidebar and change the project root folder.',
     languageSelect:   'Language — switch UI between English and 中文.',
-    statusBox:        'Status — shows whether ripgrep (rg) is installed and reachable in PATH.',
+    statusBox:        'Status — shows whether ripgrep (rg) is installed. Hover for version details.',
     rootInput:        'Project root folder — the directory ripgrep will search inside.',
     browseRootBtn:    'Browse — open the native OS folder picker to choose your project folder.',
     openRootBtn:      'Open — reveal the selected folder in Explorer / Finder.',
@@ -222,8 +234,10 @@ export const TOOLTIPS = {
     excludeInput:     'Exclude paths — comma or space-separated glob patterns to skip during search, e.g. *test*, archive/**. Applied on top of built-in exclusions.'
   },
   zh: {
+    sidebarToggleBtn: '切换侧边栏 — 显示或隐藏文件过滤导航面板。',
+    projectPill:      '当前项目 — 点击打开侧边栏更改项目根目录。',
     languageSelect:   '语言 — 切换界面语言（English / 中文）。',
-    statusBox:        '状态 — 显示 ripgrep (rg) 是否已安装并在 PATH 中。',
+    statusBox:        '状态 — 显示 ripgrep (rg) 是否已安装。悬停查看版本详情。',
     rootInput:        '项目根目录 — ripgrep 将在此目录内搜索。',
     browseRootBtn:    '浏览 — 打开系统目录选择窗口选择项目目录。',
     openRootBtn:      '打开 — 在资源管理器 / Finder 中显示所选目录。',
