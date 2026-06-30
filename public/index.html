@@ -61,10 +61,12 @@
         <label><input type="checkbox" class="glob" value="*.yaml" checked /> .yaml</label>
       </div>
 
-      <div class="hint-card">
+      <div class="hint-card" id="rgHintCard" style="display:none">
         <strong data-i18n="recommended">Recommended</strong>
         <p data-i18n="installRg">Install ripgrep first:</p>
         <code>winget install BurntSushi.ripgrep.MSVC</code>
+        <button id="installRgBtn" class="btn primary full" data-i18n="autoInstall" style="margin-top:8px">Auto Install</button>
+        <div id="installRgStatus" style="margin-top:6px;font-size:12px"></div>
       </div>
     </aside>
 

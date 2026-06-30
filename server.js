@@ -745,6 +745,38 @@ app.post('/api/open-vscode', async (req, res) => {
   });
 });
 
+app.post('/api/install-rg', async (req, res) => {
+  const platform = os.platform();
+  let result;
+
+  if (platform === 'win32') {
+    result = await runCommand(
+      'winget',
+      ['install', 'BurntSushi.ripgrep.MSVC', '--accept-source-agreements', '--accept-package-agreements'],
+      { timeoutMs: 120000 }
+    );
+  } else if (platform === 'darwin') {
+    result = await runCommand('brew', ['install', 'ripgrep'], { timeoutMs: 120000 });
+  } else {
+    result = await runCommand('apt-get', ['install', '-y', 'ripgrep'], { timeoutMs: 120000 });
+  }
+
+  if (!result.ok) {
+    return sendJson(res, 500, { ok: false, message: result.stderr || result.stdout || 'Installation failed.' });
+  }
+
+  const verify = await runCommand('rg', ['--version']);
+  sendJson(res, 200, {
+    ok: verify.ok,
+    installed: true,
+    needsRestart: !verify.ok,
+    message: verify.ok
+      ? 'ripgrep installed successfully.'
+      : 'Installed but rg not found in PATH yet — restart the server.',
+    rgVersion: verify.ok ? verify.stdout.split(/\r?\n/)[0] : null
+  });
+});
+
 app.listen(PORT, HOST, () => {
   console.log(`Codebase Search Assistant running at http://${HOST}:${PORT}`);
   if (ALLOWED_ROOTS.length) {

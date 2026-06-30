@@ -67,7 +67,12 @@ const translations = {
     limitedResults: 'Limited results',
     duration: '{ms} ms',
     noFolders: 'No folders found.',
-    nativePickerFallback: 'Native picker unavailable. Using built-in browser.'
+    nativePickerFallback: 'Native picker unavailable. Using built-in browser.',
+    autoInstall: 'Auto Install ripgrep',
+    installing: 'Installing... (may take up to 2 min)',
+    installOk: 'Installed! Reloading...',
+    installRestart: 'Installed — restart the server then refresh.',
+    installFail: 'Install failed: {msg}'
   },
   zh: {
     appTitle: '代码库搜索助手',
@@ -128,7 +133,12 @@ const translations = {
     limitedResults: '结果已限制',
     duration: '{ms} 毫秒',
     noFolders: '没有找到目录。',
-    nativePickerFallback: '系统选择窗口不可用，改用内置目录浏览。'
+    nativePickerFallback: '系统选择窗口不可用，改用内置目录浏览。',
+    autoInstall: '自动安装 ripgrep',
+    installing: '安装中...（最多需要 2 分钟）',
+    installOk: '安装成功！正在刷新...',
+    installRestart: '已安装 — 重启服务器后刷新页面。',
+    installFail: '安装失败：{msg}'
   }
 };
 
@@ -519,15 +529,41 @@ async function checkHealth() {
     if (data.rgAvailable) {
       statusBox.textContent = t('ready', { value: data.rgVersion });
       statusBox.className = 'status good';
+      $('rgHintCard').style.display = 'none';
     } else {
       statusBox.textContent = t('rgNotFound');
       statusBox.className = 'status bad';
+      $('rgHintCard').style.display = '';
     }
   } catch (_) {
     statusBox.textContent = t('serverOffline');
     statusBox.className = 'status bad';
   }
 }
+
+$('installRgBtn').addEventListener('click', async () => {
+  const btn = $('installRgBtn');
+  const status = $('installRgStatus');
+  btn.disabled = true;
+  status.textContent = t('installing');
+  try {
+    const res = await fetch('/api/install-rg', { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (data.ok) {
+      status.textContent = t('installOk');
+      setTimeout(() => location.reload(), 1500);
+    } else if (data.needsRestart) {
+      status.textContent = t('installRestart');
+      btn.disabled = false;
+    } else {
+      status.textContent = t('installFail', { msg: data.message || 'unknown error' });
+      btn.disabled = false;
+    }
+  } catch (err) {
+    status.textContent = t('installFail', { msg: err.message });
+    btn.disabled = false;
+  }
+});
 
 applyI18n();
 loadConfig();
