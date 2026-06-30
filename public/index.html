@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Codebase Search Assistant</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -13,6 +14,7 @@
       <p data-i18n="appSubtitle">Fast local search, impact check, and Git risk scan for any local project.</p>
     </div>
     <div class="header-actions">
+      <button id="sidebarToggleBtn" class="btn icon-btn" title="Toggle sidebar" aria-label="Toggle sidebar">☰</button>
       <select id="languageSelect" class="input small" aria-label="Language">
         <option value="en">English</option>
         <option value="zh">中文</option>
@@ -23,6 +25,7 @@
     </div>
   </header>
 
+  <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
   <main class="layout" id="layout">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-top-bar">

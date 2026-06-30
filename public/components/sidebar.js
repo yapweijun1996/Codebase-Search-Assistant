@@ -16,12 +16,15 @@ const FILE_PRESETS = {
   all:      null
 };
 
+const MOBILE_MQ = window.matchMedia('(max-width: 860px)');
+
 export function mountSidebar() {
   const rootInput = $('rootInput');
   const folderBrowser = $('folderBrowser');
   const upBtn = $('upFolderBtn');
   const rgHintCard = $('rgHintCard');
   const expandBtn = $('expandSidebarBtn');
+  const backdrop = $('sidebarBackdrop');
   const installBtn = $('installRgBtn');
   const installStatus = $('installRgStatus');
   const installLog = $('installRgLog');
@@ -135,6 +138,7 @@ export function mountSidebar() {
 
   $('collapseSidebarBtn').addEventListener('click', () => actions.setSidebarHidden(true));
   expandBtn.addEventListener('click', () => actions.setSidebarHidden(false));
+  backdrop.addEventListener('click', () => actions.setSidebarHidden(true));
 
   installBtn.addEventListener('click', async () => {
     installBtn.disabled = true;
@@ -170,7 +174,19 @@ export function mountSidebar() {
     $('layout').classList.toggle('sidebar-hidden', state.sidebarHidden);
     expandBtn.classList.toggle('hidden', !state.sidebarHidden);
     rgHintCard.style.display = state.health.phase === 'bad' ? '' : 'none';
+
+    const isMobile = MOBILE_MQ.matches;
+    backdrop.classList.toggle('visible', isMobile && !state.sidebarHidden);
+    document.body.style.overflow = isMobile && !state.sidebarHidden ? 'hidden' : '';
   }
+
+  // Close backdrop when resizing to desktop
+  MOBILE_MQ.addEventListener('change', () => {
+    if (!MOBILE_MQ.matches) {
+      backdrop.classList.remove('visible');
+      document.body.style.overflow = '';
+    }
+  });
 
   renderRootSuggestions();
   store.subscribe(update);

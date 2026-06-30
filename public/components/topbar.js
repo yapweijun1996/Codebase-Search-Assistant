@@ -9,9 +9,11 @@ export function mountTopbar() {
   const languageSelect = $('languageSelect');
   const darkModeBtn = $('darkModeBtn');
   const statusBox = $('statusBox');
+  const sidebarToggleBtn = $('sidebarToggleBtn');
 
   languageSelect.addEventListener('change', () => actions.setLanguage(languageSelect.value));
   darkModeBtn.addEventListener('click', () => actions.toggleDark());
+  sidebarToggleBtn.addEventListener('click', () => actions.setSidebarHidden(!store.get().sidebarHidden));
 
   function renderStatus(health) {
     if (health.phase === 'good') {

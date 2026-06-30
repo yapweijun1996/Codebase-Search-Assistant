@@ -14,10 +14,12 @@ function loadSettings() {
   return { ...SETTINGS_DEFAULTS, ...(stored && typeof stored === 'object' ? stored : {}) };
 }
 
+const isMobileInit = window.matchMedia('(max-width: 860px)').matches;
+
 const initialState = {
   language: storage.get(storage.KEYS.lang, 'en'),
   dark: storage.get(storage.KEYS.dark) === '1',
-  sidebarHidden: storage.get(storage.KEYS.sidebarHidden) === '1',
+  sidebarHidden: isMobileInit ? true : storage.get(storage.KEYS.sidebarHidden) === '1',
   health: { phase: 'checking', rgVersion: null }, // checking | good | bad | offline
   settings: loadSettings(),
   busy: { search: false, impact: false, git: false }

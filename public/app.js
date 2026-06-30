@@ -30,9 +30,16 @@ store.subscribe((state) => {
   }
 });
 
-// Global shortcuts: Esc cancels in-flight requests, Ctrl/Cmd+K focuses search.
+// Global shortcuts: Esc closes mobile sidebar (if open) or cancels requests; Ctrl/Cmd+K focuses search.
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') content.cancelAll();
+  if (e.key === 'Escape') {
+    const isMobile = window.matchMedia('(max-width: 860px)').matches;
+    if (isMobile && !store.get().sidebarHidden) {
+      actions.setSidebarHidden(true);
+    } else {
+      content.cancelAll();
+    }
+  }
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
     e.preventDefault();
     content.focusSearch();
