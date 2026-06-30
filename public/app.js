@@ -68,6 +68,8 @@ const translations = {
     limitedResults: 'Limited results',
     fileLimited: 'Showing first {n} files — increase limit or narrow search',
     filesFound: '{n} files',
+    showMore: '▼  Show {n} more',
+    showLess: '▲  Show less',
     duration: '{ms} ms',
     noFolders: 'No folders found.',
     nativePickerFallback: 'Native picker unavailable. Using built-in browser.',
@@ -139,6 +141,8 @@ const translations = {
     nativePickerFallback: '系统选择窗口不可用，改用内置目录浏览。',
     fileLimited: '只显示前 {n} 个文件 — 增大限制或缩小搜索范围',
     filesFound: '{n} 个文件',
+    showMore: '▼  显示更多 {n} 行',
+    showLess: '▲  收起',
     autoInstall: '自动安装 ripgrep',
     installing: '安装中...（最多需要 2 分钟）',
     installOk: '安装成功！正在刷新...',
@@ -380,6 +384,19 @@ $('searchInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') runSearch();
 });
 
+const PREVIEW_LINES = 5;
+
+function updateToggle(group) {
+  const overflow = group.count - PREVIEW_LINES;
+  if (overflow <= 0) { group.toggleBtn.classList.add('hidden'); return; }
+  group.toggleBtn.classList.remove('hidden');
+  group.toggleBtn.textContent = group.expanded ? t('showLess') : t('showMore', { n: overflow });
+  const rows = group.linesEl.querySelectorAll('.line-row');
+  rows.forEach((row, i) => {
+    row.classList.toggle('hidden', !group.expanded && i >= PREVIEW_LINES);
+  });
+}
+
 function appendResultToGroup(container, item, fileGroups) {
   const key = item.relativePath || item.path;
 
@@ -404,8 +421,14 @@ function appendResultToGroup(container, item, fileGroups) {
     const linesEl = document.createElement('div');
     card.appendChild(linesEl);
 
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'btn toggle-btn hidden';
+    card.appendChild(toggleBtn);
+
     container.appendChild(card);
-    fileGroups.set(key, { linesEl, countEl, count: 0 });
+    const group = { linesEl, countEl, toggleBtn, count: 0, expanded: false };
+    toggleBtn.addEventListener('click', () => { group.expanded = !group.expanded; updateToggle(group); });
+    fileGroups.set(key, group);
   }
 
   const group = fileGroups.get(key);
@@ -414,6 +437,7 @@ function appendResultToGroup(container, item, fileGroups) {
 
   const row = document.createElement('div');
   row.className = 'line-row';
+  if (!group.expanded && group.count > PREVIEW_LINES) row.classList.add('hidden');
 
   const lineNum = document.createElement('span');
   lineNum.className = 'line-number';
@@ -436,6 +460,7 @@ function appendResultToGroup(container, item, fileGroups) {
   row.appendChild(codeLine);
   row.appendChild(openBtn);
   group.linesEl.appendChild(row);
+  updateToggle(group);
 }
 
 async function runSearch() {

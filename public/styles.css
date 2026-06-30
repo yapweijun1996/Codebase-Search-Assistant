@@ -240,6 +240,21 @@ code {
   font-size: 13px;
 }
 .line-row .open-btn { margin: 6px; align-self: center; }
+.toggle-btn {
+  width: 100%;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 12px 12px;
+  background: var(--bg);
+  color: var(--muted);
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  display: block;
+}
+.toggle-btn:hover { background: #eef2ff; color: var(--primary); }
 .code-line {
   margin: 0;
   padding: 12px;
