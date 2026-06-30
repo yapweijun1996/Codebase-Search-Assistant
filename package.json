@@ -1,0 +1,24 @@
+{
+  "name": "codebase-search-assistant",
+  "version": "1.0.0",
+  "description": "Local browser-based codebase search and impact checker for any project.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "check": "node --check server.js && node --check public/app.js && node --check scripts/smoke-test.js",
+    "smoke": "node scripts/smoke-test.js"
+  },
+  "keywords": [
+    "code-search",
+    "ripgrep",
+    "local-tool",
+    "impact-analysis"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Codebase Search Assistant</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1 data-i18n="appTitle">Codebase Search Assistant</h1>
+      <p data-i18n="appSubtitle">Fast local search, impact check, and Git risk scan for any local project.</p>
+    </div>
+    <div class="header-actions">
+      <select id="languageSelect" class="input small" aria-label="Language">
+        <option value="en">English</option>
+        <option value="zh">中文</option>
+      </select>
+      <div class="status" id="statusBox" data-i18n="checking">Checking...</div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <label class="field-label" data-i18n="rootFolder">Project root folder</label>
+      <input id="rootInput" class="input" placeholder="C:\\path\\to\\your\\project" />
+      <div class="button-row">
+        <button id="browseRootBtn" class="btn full" data-i18n="browseFolder">Browse</button>
+        <button id="openRootBtn" class="btn full" data-i18n="openFolder">Open</button>
+        <button id="saveRootBtn" class="btn primary full" data-i18n="saveFolder">Save folder</button>
+      </div>
+      <div id="folderBrowser" class="folder-browser hidden">
+        <div class="folder-browser-head">
+          <strong data-i18n="selectFolder">Select folder</strong>
+          <button id="closeBrowserBtn" class="btn small-btn" data-i18n="close">Close</button>
+        </div>
+        <div id="browserPath" class="browser-path"></div>
+        <div class="button-row">
+          <button id="upFolderBtn" class="btn small-btn" data-i18n="up">Up</button>
+          <button id="useFolderBtn" class="btn primary small-btn" data-i18n="useThisFolder">Use this folder</button>
+        </div>
+        <div id="folderList" class="folder-list"></div>
+      </div>
+
+      <div class="filter-card">
+        <h3 data-i18n="fileFilters">File filters</h3>
+        <label><input type="checkbox" class="glob" value="*.cfm" checked /> .cfm</label>
+        <label><input type="checkbox" class="glob" value="*.cfc" checked /> .cfc</label>
+        <label><input type="checkbox" class="glob" value="*.js" checked /> .js</label>
+        <label><input type="checkbox" class="glob" value="*.jsx" checked /> .jsx</label>
+        <label><input type="checkbox" class="glob" value="*.ts" checked /> .ts</label>
+        <label><input type="checkbox" class="glob" value="*.tsx" checked /> .tsx</label>
+        <label><input type="checkbox" class="glob" value="*.css" checked /> .css</label>
+        <label><input type="checkbox" class="glob" value="*.html" checked /> .html</label>
+        <label><input type="checkbox" class="glob" value="*.sql" checked /> .sql</label>
+        <label><input type="checkbox" class="glob" value="*.json" checked /> .json</label>
+        <label><input type="checkbox" class="glob" value="*.md" checked /> .md</label>
+        <label><input type="checkbox" class="glob" value="*.py" checked /> .py</label>
+        <label><input type="checkbox" class="glob" value="*.yml" checked /> .yml</label>
+        <label><input type="checkbox" class="glob" value="*.yaml" checked /> .yaml</label>
+      </div>
+
+      <div class="hint-card">
+        <strong data-i18n="recommended">Recommended</strong>
+        <p data-i18n="installRg">Install ripgrep first:</p>
+        <code>winget install BurntSushi.ripgrep.MSVC</code>
+      </div>
+    </aside>
+
+    <section class="content">
+      <nav class="tabs">
+        <button class="tab active" data-tab="search" data-i18n="tabSearch">Search</button>
+        <button class="tab" data-tab="impact" data-i18n="tabImpact">Impact Check</button>
+        <button class="tab" data-tab="git" data-i18n="tabGit">Git Risk Check</button>
+      </nav>
+
+      <section id="search" class="panel active">
+        <div class="toolbar">
+          <input id="searchInput" class="input grow" data-i18n-placeholder="searchPlaceholder" placeholder="Search keyword, e.g. function name, route, table" />
+          <label class="inline"><input id="caseSensitive" type="checkbox" /> <span data-i18n="caseSensitive">Case sensitive</span></label>
+          <label class="inline"><input id="deepSearch" type="checkbox" /> <span data-i18n="deepSearch">Deep search</span></label>
+          <select id="contextSelect" class="input small">
+            <option value="0" data-i18n="noContext">No context</option>
+            <option value="1" data-i18n="oneContext">1 context line</option>
+            <option value="2" data-i18n="twoContext">2 context lines</option>
+          </select>
+          <button id="searchBtn" class="btn primary" data-i18n="search">Search</button>
+          <button id="cancelSearchBtn" class="btn hidden" data-i18n="cancel">Cancel</button>
+        </div>
+        <div id="searchSummary" class="summary"></div>
+        <div id="searchResults" class="results"></div>
+      </section>
+
+      <section id="impact" class="panel">
+        <div class="toolbar">
+          <input id="impactInput" class="input grow" data-i18n-placeholder="impactPlaceholder" placeholder="Target file/function, e.g. inc_common.cfm or calculateAmount" />
+          <button id="impactBtn" class="btn primary" data-i18n="analyzeImpact">Analyze Impact</button>
+          <button id="cancelImpactBtn" class="btn hidden" data-i18n="cancel">Cancel</button>
+        </div>
+        <div id="impactSummary" class="summary"></div>
+        <div id="impactResults" class="results"></div>
+      </section>
+
+      <section id="git" class="panel">
+        <div class="toolbar">
+          <button id="gitRiskBtn" class="btn primary" data-i18n="scanGit">Scan Current Git Changes</button>
+          <button id="cancelGitBtn" class="btn hidden" data-i18n="cancel">Cancel</button>
+          <span class="muted"><span data-i18n="uses">Uses</span> <code>git diff --name-only HEAD</code></span>
+        </div>
+        <div id="gitSummary" class="summary"></div>
+        <div id="gitResults" class="results"></div>
+      </section>
+    </section>
+  </main>
+
+  <template id="resultTemplate">
+    <article class="result-card">
+      <div class="result-head">
+        <div>
+          <strong class="path"></strong>
+          <span class="line-number"></span>
+        </div>
+        <button class="btn small-btn open-btn" data-i18n="openVscode">Open VS Code</button>
+      </div>
+      <pre class="code-line"></pre>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
