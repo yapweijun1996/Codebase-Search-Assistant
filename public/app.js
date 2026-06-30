@@ -127,7 +127,8 @@ const translations = {
     settingMaxFilesize: 'Max file size',
     settingMaxFilesizeHint: 'Skip files larger than this size.',
     settingsReset: 'Reset defaults',
-    settingsSave: 'Save'
+    settingsSave: 'Save',
+    copyForAI: '📋 Copy for AI'
   },
   zh: {
     appTitle: '代码库搜索助手',
@@ -206,7 +207,8 @@ const translations = {
     settingMaxFilesize: '最大文件大小',
     settingMaxFilesizeHint: '跳过超过此大小的文件。',
     settingsReset: '恢复默认',
-    settingsSave: '保存'
+    settingsSave: '保存',
+    copyForAI: '📋 复制给 AI'
   }
 };
 
@@ -237,6 +239,9 @@ const TOOLTIPS = {
     cancelImpactBtn:  'Cancel — stop the impact analysis.',
     gitRiskBtn:       'Scan Git Changes — reads git diff, then ripgrep-searches for each changed filename to count references and suggest test areas.',
     cancelGitBtn:     'Cancel — stop the Git risk scan.',
+    copySearchBtn:    'Copy for AI — copies all search results as structured markdown ready to paste into Claude, ChatGPT, or any AI assistant.',
+    copyImpactBtn:    'Copy for AI — copies the impact report (target, risk, modules, call sites) as markdown for AI-assisted code review.',
+    copyGitBtn:       'Copy for AI — copies the git risk brief (changed files, risk scores, suggested tests) as markdown for AI-assisted review.',
   },
   zh: {
     languageSelect:   '语言 — 切换界面语言（English / 中文）。',
@@ -261,6 +266,9 @@ const TOOLTIPS = {
     cancelImpactBtn:  '取消 — 停止影响分析。',
     gitRiskBtn:       '扫描 Git 修改 — 读取 git diff，再用 ripgrep 统计每个改动文件的引用次数并给出测试建议。',
     cancelGitBtn:     '取消 — 停止 Git 风险扫描。',
+    copySearchBtn:    '复制给 AI — 将搜索结果格式化为 Markdown，可直接粘贴到 Claude、ChatGPT 等 AI 助手。',
+    copyImpactBtn:    '复制给 AI — 将影响报告（目标、风险、模块、引用位置）格式化为 Markdown，方便 AI 代码审查。',
+    copyGitBtn:       '复制给 AI — 将 Git 风险摘要（修改文件、风险评级、建议测试）格式化为 Markdown，方便 AI 审查。',
   }
 };
 // ─────────────────────────────────────────────────────────────────────────────
@@ -422,6 +430,120 @@ function escapeHtml(value) {
   return String(value || '').replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
 }
 
+// ─── Last-result stores (for Copy for AI) ────────────────────────────────────
+let lastSearchStore = null;
+let lastImpactStore = null;
+let lastGitStore    = null;
+
+// ─── Search history ───────────────────────────────────────────────────────────
+const HISTORY_KEY = 'codeSearchHistory';
+const MAX_HISTORY = 10;
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (_) { return []; }
+}
+
+function pushHistory(query) {
+  const h = getHistory().filter((q) => q !== query);
+  h.unshift(query);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0, MAX_HISTORY)));
+  renderHistory();
+}
+
+function renderHistory() {
+  const container = $('searchHistory');
+  if (!container) return;
+  const h = getHistory();
+  container.innerHTML = h.map((q) =>
+    `<button class="history-chip" title="${escapeHtml(q)}" data-query="${escapeHtml(q)}">${escapeHtml(q)}</button>`
+  ).join('');
+}
+
+// ─── Match highlighting ───────────────────────────────────────────────────────
+function renderCodeLine(el, line, submatches) {
+  if (!submatches || !submatches.length) { el.textContent = line; return; }
+  let html = '';
+  let pos = 0;
+  for (const m of submatches) {
+    if (m.start > pos) html += escapeHtml(line.slice(pos, m.start));
+    html += `<mark class="match-highlight">${escapeHtml(line.slice(m.start, m.end))}</mark>`;
+    pos = m.end;
+  }
+  if (pos < line.length) html += escapeHtml(line.slice(pos));
+  el.innerHTML = html;
+}
+
+// ─── Copy for AI formatters ───────────────────────────────────────────────────
+function formatSearchForAI(store) {
+  const lines = [
+    `## Codebase Search: "${store.query}"`,
+    `Project: ${store.root}`,
+    `Matches: ${store.matchCount} | Files: ${store.fileCount}${store.duration ? ' | ' + store.duration : ''}`,
+    ''
+  ];
+  const fileMap = new Map();
+  for (const r of store.results) {
+    const key = r.relativePath || r.path;
+    if (!fileMap.has(key)) fileMap.set(key, []);
+    fileMap.get(key).push(r);
+  }
+  for (const [file, rows] of fileMap) {
+    lines.push(`### ${file}  (${rows.length} match${rows.length > 1 ? 'es' : ''})`);
+    for (const r of rows) lines.push(`Line ${r.lineNumber}: ${(r.line || '').trim()}`);
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+function formatImpactForAI(store) {
+  const lines = [
+    `## Impact Report: "${store.target}"`,
+    `Project: ${store.root}`,
+    `Risk: ${store.risk} | Usages: ${store.usageCount} | Modules: ${store.modules.join(', ') || 'none'}`,
+    ''
+  ];
+  const fileMap = new Map();
+  for (const r of store.results) {
+    const key = r.relativePath || r.path;
+    if (!fileMap.has(key)) fileMap.set(key, []);
+    fileMap.get(key).push(r);
+  }
+  for (const [file, rows] of fileMap) {
+    lines.push(`### ${file}`);
+    for (const r of rows) lines.push(`Line ${r.lineNumber}: ${(r.line || '').trim()}`);
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+function formatGitForAI(store) {
+  const lines = [
+    `## Git Risk Brief`,
+    `Project: ${store.root}`,
+    `Changed: ${store.changedCount} files`,
+    ''
+  ];
+  for (const f of store.files) {
+    const icon = f.risk === 'HIGH' ? '⚠' : f.risk === 'MEDIUM' ? '~' : '✓';
+    lines.push(`${icon} ${f.risk}  ${f.file}  (${f.usageCount} refs)${f.modules.length ? '  [' + f.modules.join(', ') + ']' : ''}`);
+    if (f.suggestedTests.length) lines.push(`  Tests: ${f.suggestedTests.join(' · ')}`);
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
+async function copyToClipboard(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch (_) { return false; }
+}
+
+async function flashCopy(btn) {
+  const orig = btn.textContent;
+  const ok = await copyToClipboard(btn._copyText || '');
+  btn.textContent = ok ? '✓ Copied!' : '✗ Failed';
+  setTimeout(() => { btn.textContent = orig; }, 1800);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function badge(text, level) {
   const cls = level ? ` ${level.toLowerCase()}` : '';
   return `<span class="badge${cls}">${escapeHtml(text)}</span>`;
@@ -559,7 +681,7 @@ function appendResultToGroup(container, item, fileGroups) {
 
   const codeLine = document.createElement('pre');
   codeLine.className = 'code-line';
-  codeLine.textContent = item.line || '';
+  renderCodeLine(codeLine, item.line || '', item.submatches);
 
   const openBtn = document.createElement('button');
   openBtn.className = 'btn small-btn open-btn';
@@ -581,13 +703,18 @@ async function runSearch() {
   const query = $('searchInput').value.trim();
   if (!query) return showError('searchResults', t('enterSearch'));
 
+  localStorage.setItem('codeSearchQuery', query);
+  pushHistory(query);
+
   const controller = startRequest('search');
   const resultsDiv = $('searchResults');
   resultsDiv.innerHTML = '';
+  $('copySearchBtn').classList.add('hidden');
   toastSummary('searchSummary', [{ text: t('searching') }]);
 
   let liveCount = 0;
   const fileGroups = new Map();
+  const streamResults = [];
 
   try {
     const res = await fetch('/api/search', {
@@ -637,6 +764,7 @@ async function runSearch() {
 
         if (event === 'result') {
           liveCount++;
+          streamResults.push(data);
           toastSummary('searchSummary', [{ text: t('matches', { count: liveCount }) + '…' }]);
           appendResultToGroup(resultsDiv, data, fileGroups);
         } else if (event === 'done') {
@@ -650,18 +778,25 @@ async function runSearch() {
             $('searchSummary').innerHTML = '';
             return;
           }
+          const durationText = formatDuration(data.durationMs);
           const summary = [
             { text: t('matches', { count: data.count }) },
             { text: t('filesFound', { n: data.fileCount || liveCount }) },
             { text: data.modules && data.modules.length ? data.modules.join(', ') : t('noModuleInferred') }
           ];
-          const durationText = formatDuration(data.durationMs);
           if (durationText) summary.push({ text: durationText });
           if (data.timedOut) summary.push({ text: t('stoppedEarly'), level: 'MEDIUM' });
           else if (data.fileTruncated) summary.push({ text: t('fileLimited', { n: data.fileCount }), level: 'MEDIUM' });
           else if (data.truncated) summary.push({ text: t('limitedResults'), level: 'MEDIUM' });
           toastSummary('searchSummary', summary);
-          if (!liveCount) resultsDiv.innerHTML = `<div class="error">${escapeHtml(t('noResults'))}</div>`;
+          if (liveCount) {
+            lastSearchStore = { query, root: rootInput.value, results: streamResults, matchCount: data.count, fileCount: data.fileCount || fileGroups.size, duration: durationText };
+            const copyBtn = $('copySearchBtn');
+            copyBtn._copyText = formatSearchForAI(lastSearchStore);
+            copyBtn.classList.remove('hidden');
+          } else {
+            resultsDiv.innerHTML = `<div class="error">${escapeHtml(t('noResults'))}</div>`;
+          }
         }
       }
     }
@@ -689,6 +824,7 @@ async function runImpact() {
 
   const controller = startRequest('impact');
   $('impactResults').innerHTML = '';
+  $('copyImpactBtn').classList.add('hidden');
   toastSummary('impactSummary', [{ text: t('analyzingImpact') }]);
 
   try {
@@ -705,6 +841,13 @@ async function runImpact() {
       { text: t('modules', { value: data.modules.length ? data.modules.join(', ') : t('unknown') }) },
       { text: formatDuration(data.durationMs) || '-' }
     ]);
+
+    if (data.results && data.results.length) {
+      lastImpactStore = { target: data.target, root: rootInput.value, risk: data.risk, usageCount: data.usageCount, modules: data.modules, results: data.results };
+      const copyBtn = $('copyImpactBtn');
+      copyBtn._copyText = formatImpactForAI(lastImpactStore);
+      copyBtn.classList.remove('hidden');
+    }
 
     renderResults('impactResults', data.results);
   } catch (err) {
@@ -725,6 +868,7 @@ $('cancelGitBtn').addEventListener('click', () => cancelRequest('git'));
 async function runGitRisk() {
   const controller = startRequest('git');
   $('gitResults').innerHTML = '';
+  $('copyGitBtn').classList.add('hidden');
   toastSummary('gitSummary', [{ text: t('scanningGit') }]);
 
   try {
@@ -738,6 +882,13 @@ async function runGitRisk() {
       { text: t('sortedByRisk') },
       { text: formatDuration(data.durationMs) || '-' }
     ]);
+
+    if (data.files && data.files.length) {
+      lastGitStore = { root: rootInput.value, changedCount: data.changedCount, files: data.files };
+      const copyBtn = $('copyGitBtn');
+      copyBtn._copyText = formatGitForAI(lastGitStore);
+      copyBtn.classList.remove('hidden');
+    }
 
     const html = data.files.map((file) => {
       const tests = file.suggestedTests.map((testName) => `<li>${escapeHtml(testName)}</li>`).join('');
@@ -881,6 +1032,29 @@ function attachTooltips() {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── Copy for AI button handlers ─────────────────────────────────────────────
+$('copySearchBtn').addEventListener('click', () => flashCopy($('copySearchBtn')));
+$('copyImpactBtn').addEventListener('click', () => flashCopy($('copyImpactBtn')));
+$('copyGitBtn').addEventListener('click',   () => flashCopy($('copyGitBtn')));
+
+// ─── Search history click ─────────────────────────────────────────────────────
+$('searchHistory').addEventListener('click', (e) => {
+  const chip = e.target.closest('.history-chip');
+  if (!chip) return;
+  $('searchInput').value = chip.dataset.query;
+  runSearch();
+});
+
+// ─── Esc to cancel any active request ────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    ['search', 'impact', 'git'].forEach((type) => {
+      if (activeRequests[type]) cancelRequest(type);
+    });
+  }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 // restore max-files preference
 const maxFilesSelect = $('maxFilesSelect');
 if (maxFilesSelect) {
@@ -891,6 +1065,8 @@ if (maxFilesSelect) {
   });
 }
 
+if (savedQuery) $('searchInput').value = savedQuery;
+renderHistory();
 attachTooltips();
 applyI18n();
 loadConfig();
