@@ -389,35 +389,103 @@ $('searchInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') runSearch();
 });
 
+function appendResultCard(container, item) {
+  const template = $('resultTemplate');
+  const node = template.content.cloneNode(true);
+  node.querySelector('.path').textContent = item.relativePath || item.path;
+  node.querySelector('.line-number').textContent = `${t('line')} ${item.lineNumber || '-'}`;
+  node.querySelector('.code-line').textContent = item.line || '';
+  node.querySelector('.open-btn').textContent = t('openVscode');
+  node.querySelector('.open-btn').addEventListener('click', async () => {
+    try {
+      await api('/api/open-vscode', { root: rootInput.value, filePath: item.path, lineNumber: item.lineNumber });
+    } catch (err) { alert(err.message); }
+  });
+  container.appendChild(node);
+}
+
 async function runSearch() {
   const query = $('searchInput').value.trim();
   if (!query) return showError('searchResults', t('enterSearch'));
 
   const controller = startRequest('search');
-  $('searchResults').innerHTML = '';
+  const resultsDiv = $('searchResults');
+  resultsDiv.innerHTML = '';
   toastSummary('searchSummary', [{ text: t('searching') }]);
 
-  try {
-    const data = await api('/api/search', {
-      root: rootInput.value,
-      query,
-      globs: getGlobs(),
-      caseSensitive: $('caseSensitive').checked,
-      deepSearch: $('deepSearch').checked,
-      context: Number($('contextSelect').value),
-      maxResults: 300
-    }, controller.signal);
+  let liveCount = 0;
 
-    const summary = [
-      { text: t('matches', { count: data.count }) },
-      { text: data.modules.length ? data.modules.join(', ') : t('noModuleInferred') }
-    ];
-    const durationText = formatDuration(data.durationMs);
-    if (durationText) summary.push({ text: durationText });
-    if (data.timedOut) summary.push({ text: t('stoppedEarly'), level: 'MEDIUM' });
-    else if (data.truncated) summary.push({ text: t('limitedResults'), level: 'MEDIUM' });
-    toastSummary('searchSummary', summary);
-    renderResults('searchResults', data.results);
+  try {
+    const res = await fetch('/api/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        root: rootInput.value,
+        query,
+        globs: getGlobs(),
+        caseSensitive: $('caseSensitive').checked,
+        deepSearch: $('deepSearch').checked,
+        context: Number($('contextSelect').value),
+        maxResults: 300
+      }),
+      signal: controller.signal
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.message || t('requestFailed'));
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+
+      for (const block of parts) {
+        let event = 'message';
+        let dataStr = '';
+        for (const line of block.split('\n')) {
+          if (line.startsWith('event: ')) event = line.slice(7).trim();
+          else if (line.startsWith('data: ')) dataStr = line.slice(6).trim();
+        }
+        if (!dataStr) continue;
+        const data = JSON.parse(dataStr);
+
+        if (event === 'result') {
+          liveCount++;
+          toastSummary('searchSummary', [{ text: t('matches', { count: liveCount }) + '…' }]);
+          appendResultCard(resultsDiv, data);
+        } else if (event === 'done') {
+          if (data.rgMissing) {
+            showError('searchResults', 'ripgrep / rg is not installed or not available in PATH.');
+            $('searchSummary').innerHTML = '';
+            return;
+          }
+          if (!data.ok && !data.canceled) {
+            showError('searchResults', data.stderr || t('requestFailed'));
+            $('searchSummary').innerHTML = '';
+            return;
+          }
+          const summary = [
+            { text: t('matches', { count: data.count }) },
+            { text: data.modules && data.modules.length ? data.modules.join(', ') : t('noModuleInferred') }
+          ];
+          const durationText = formatDuration(data.durationMs);
+          if (durationText) summary.push({ text: durationText });
+          if (data.timedOut) summary.push({ text: t('stoppedEarly'), level: 'MEDIUM' });
+          else if (data.truncated) summary.push({ text: t('limitedResults'), level: 'MEDIUM' });
+          toastSummary('searchSummary', summary);
+          if (!liveCount) resultsDiv.innerHTML = `<div class="error">${escapeHtml(t('noResults'))}</div>`;
+        }
+      }
+    }
   } catch (err) {
     if (isAbortError(err)) {
       toastSummary('searchSummary', [{ text: t('canceled') }]);

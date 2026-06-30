@@ -566,9 +566,8 @@ app.post('/api/reveal-folder', async (req, res) => {
   sendJson(res, 200, { ok: true });
 });
 
-app.post('/api/search', async (req, res) => {
+app.post('/api/search', (req, res) => {
   const startedAt = Date.now();
-  const signal = createRequestSignal(req, res);
   const { root, query, globs, caseSensitive, context, maxResults, deepSearch } = req.body || {};
   if (!query || !String(query).trim()) return res.status(400).json({ ok: false, message: 'Search keyword is required.' });
 
@@ -576,28 +575,74 @@ app.post('/api/search', async (req, res) => {
   if (!rootCheck.ok) return res.status(rootCheck.status).json({ ok: false, message: rootCheck.message });
   const resolvedRoot = rootCheck.root;
 
-  const output = await searchWithRg(resolvedRoot, {
-    query: String(query).trim(),
-    globs,
-    caseSensitive: !!caseSensitive,
-    context,
-    maxResults,
-    deepSearch: !!deepSearch
-  }, signal);
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
 
-  if (output.canceled) return sendJson(res, 499, output);
-  if (!output.ok) return sendJson(res, 500, output);
+  const send = (event, data) => {
+    if (!res.writableEnded) res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
 
-  sendJson(res, 200, {
-    ok: true,
-    root: resolvedRoot,
-    count: output.results.length,
-    results: output.results,
-    modules: inferModulesFromResults(output.results),
-    truncated: !!output.truncated,
-    timedOut: !!output.timedOut,
-    durationMs: Date.now() - startedAt,
-    message: output.message
+  const maxRes = Number.isFinite(Number(maxResults)) ? Math.max(1, Math.min(Number(maxResults), 1000)) : 300;
+  const args = buildRgArgs({
+    query: String(query).trim(), globs, caseSensitive: !!caseSensitive, context, deepSearch: !!deepSearch
+  });
+
+  let pending = '';
+  let stderr = '';
+  let count = 0;
+  let killedByLimit = false;
+  let settled = false;
+  const allResults = [];
+
+  const child = spawn('rg', args, { cwd: resolvedRoot, shell: false, windowsHide: true, env: process.env });
+
+  const finish = (payload) => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(timer);
+    req.off('close', onClose);
+    send('done', { ...payload, modules: inferModulesFromResults(allResults), durationMs: Date.now() - startedAt });
+    res.end();
+  };
+
+  const timer = setTimeout(() => {
+    child.kill();
+    finish({ ok: true, count, truncated: true, timedOut: true });
+  }, COMMAND_TIMEOUT_MS);
+
+  const onClose = () => { child.kill(); finish({ ok: false, canceled: true, count }); };
+  req.on('close', onClose);
+
+  child.stdout.on('data', (chunk) => {
+    pending += chunk.toString('utf8');
+    const lines = pending.split(/\r?\n/);
+    pending = lines.pop() || '';
+    for (const line of lines) {
+      const item = parseRgJsonLine(line, resolvedRoot);
+      if (!item) continue;
+      allResults.push(item);
+      count++;
+      send('result', item);
+      if (count >= maxRes) { killedByLimit = true; child.kill(); return; }
+    }
+  });
+
+  child.stderr.on('data', (chunk) => { stderr += chunk.toString('utf8'); });
+
+  child.on('error', (err) => {
+    finish({ ok: false, count, stderr: err.message || stderr });
+  });
+
+  child.on('close', (code) => {
+    if (pending) {
+      const item = parseRgJsonLine(pending, resolvedRoot);
+      if (item && count < maxRes) { allResults.push(item); count++; send('result', item); }
+    }
+    if (killedByLimit) return finish({ ok: true, count, truncated: true });
+    const rgMissing = /ENOENT|not found|not recognized/i.test(stderr);
+    finish({ ok: code === 0 || code === 1, count, truncated: false, rgMissing, stderr: stderr || null });
   });
 });
 
