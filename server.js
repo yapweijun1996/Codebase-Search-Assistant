@@ -265,13 +265,16 @@ function validateRoot(root) {
   return { ok: true, root: resolvedRoot };
 }
 
-function buildRgArgs({ query, globs, caseSensitive, context, deepSearch }) {
+const ALLOWED_FILESIZES = new Set(['500K', '1M', '5M', '10M']);
+
+function buildRgArgs({ query, globs, caseSensitive, context, deepSearch, maxFilesize }) {
+  const filesize = ALLOWED_FILESIZES.has(maxFilesize) ? maxFilesize : RG_MAX_FILESIZE;
   const args = [
     '--json',
     '--line-number',
     '--column',
     '--threads', String(deepSearch ? Math.max(RG_THREADS, 2) : RG_THREADS),
-    '--max-filesize', deepSearch ? '10M' : RG_MAX_FILESIZE,
+    '--max-filesize', deepSearch ? '10M' : filesize,
     '--glob', '!node_modules/**',
     '--glob', '!.git/**',
     '--glob', '!.svn/**',
@@ -452,8 +455,9 @@ function classifyRisk(filePath, usageCount = 0) {
 
 async function searchWithRg(root, params, signal) {
   const args = buildRgArgs(params);
-  const maxResults = Number.isFinite(Number(params.maxResults)) ? Math.max(1, Math.min(Number(params.maxResults), 1000)) : 300;
-  const result = await runRgSearch(root, args, { timeoutMs: COMMAND_TIMEOUT_MS, signal, maxResults });
+  const maxResults = Number.isFinite(Number(params.maxResults)) ? Math.max(1, Math.min(Number(params.maxResults), 2000)) : 300;
+  const timeoutMs = Number.isFinite(Number(params.timeoutMs)) ? Math.max(3000, Math.min(Number(params.timeoutMs), 120000)) : COMMAND_TIMEOUT_MS;
+  const result = await runRgSearch(root, args, { timeoutMs, signal, maxResults });
 
   if (result.canceled) {
     return { ok: false, canceled: true, message: 'Request canceled.' };
@@ -568,7 +572,7 @@ app.post('/api/reveal-folder', async (req, res) => {
 
 app.post('/api/search', (req, res) => {
   const startedAt = Date.now();
-  const { root, query, globs, caseSensitive, context, maxResults, maxFiles, deepSearch } = req.body || {};
+  const { root, query, globs, caseSensitive, context, maxResults, maxFiles, deepSearch, timeoutMs, maxFilesize } = req.body || {};
   if (!query || !String(query).trim()) return res.status(400).json({ ok: false, message: 'Search keyword is required.' });
 
   const rootCheck = validateRoot(root);
@@ -584,10 +588,11 @@ app.post('/api/search', (req, res) => {
     if (!res.writableEnded) res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
 
-  const maxRes = Number.isFinite(Number(maxResults)) ? Math.max(1, Math.min(Number(maxResults), 1000)) : 300;
+  const maxRes = Number.isFinite(Number(maxResults)) ? Math.max(1, Math.min(Number(maxResults), 2000)) : 300;
   const maxFilesLimit = Number(maxFiles) > 0 ? Math.min(Number(maxFiles), 2000) : Infinity;
+  const sseTimeoutMs = Number.isFinite(Number(timeoutMs)) ? Math.max(3000, Math.min(Number(timeoutMs), 120000)) : COMMAND_TIMEOUT_MS;
   const args = buildRgArgs({
-    query: String(query).trim(), globs, caseSensitive: !!caseSensitive, context, deepSearch: !!deepSearch
+    query: String(query).trim(), globs, caseSensitive: !!caseSensitive, context, deepSearch: !!deepSearch, maxFilesize
   });
 
   let pending = '';
@@ -618,7 +623,7 @@ app.post('/api/search', (req, res) => {
   const timer = setTimeout(() => {
     child.kill();
     finish({ ok: true, count, truncated: true, timedOut: true });
-  }, COMMAND_TIMEOUT_MS);
+  }, sseTimeoutMs);
 
   const onClose = () => { if (!res.writableEnded) { child.kill(); finish({ ok: false, canceled: true, count }); } };
   res.on('close', onClose);

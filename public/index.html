@@ -17,6 +17,7 @@
         <option value="en">English</option>
         <option value="zh">中文</option>
       </select>
+      <button id="settingsBtn" class="btn icon-btn" title="Settings">⚙</button>
       <div class="status" id="statusBox" data-i18n="checking">Checking...</div>
     </div>
   </header>
@@ -98,7 +99,9 @@
           </select>
           <button id="searchBtn" class="btn primary" data-i18n="search">Search</button>
           <button id="cancelSearchBtn" class="btn hidden" data-i18n="cancel">Cancel</button>
+          <button id="copySearchBtn" class="btn small-btn hidden" data-i18n="copyForAI">📋 Copy for AI</button>
         </div>
+        <div id="searchHistory" class="search-history"></div>
         <div id="searchSummary" class="summary"></div>
         <div id="searchResults" class="results"></div>
       </section>
@@ -108,6 +111,7 @@
           <input id="impactInput" class="input grow" data-i18n-placeholder="impactPlaceholder" placeholder="Target file/function, e.g. inc_common.cfm or calculateAmount" />
           <button id="impactBtn" class="btn primary" data-i18n="analyzeImpact">Analyze Impact</button>
           <button id="cancelImpactBtn" class="btn hidden" data-i18n="cancel">Cancel</button>
+          <button id="copyImpactBtn" class="btn small-btn hidden" data-i18n="copyForAI">📋 Copy for AI</button>
         </div>
         <div id="impactSummary" class="summary"></div>
         <div id="impactResults" class="results"></div>
@@ -117,6 +121,7 @@
         <div class="toolbar">
           <button id="gitRiskBtn" class="btn primary" data-i18n="scanGit">Scan Current Git Changes</button>
           <button id="cancelGitBtn" class="btn hidden" data-i18n="cancel">Cancel</button>
+          <button id="copyGitBtn" class="btn small-btn hidden" data-i18n="copyForAI">📋 Copy for AI</button>
           <span class="muted"><span data-i18n="uses">Uses</span> <code>git diff --name-only HEAD</code></span>
         </div>
         <div id="gitSummary" class="summary"></div>
@@ -139,6 +144,58 @@
   </template>
 
   <div id="tooltip" class="tooltip" role="tooltip"></div>
+  <div id="settingsModal" class="modal-overlay hidden">
+    <div class="modal">
+      <h2 data-i18n="settingsTitle">Search Settings</h2>
+
+      <div class="modal-row">
+        <label for="setTimeoutMs">
+          <span data-i18n="settingTimeout">Search timeout</span>
+          <span class="hint" data-i18n="settingTimeoutHint">Stop search after this duration to protect disk I/O.</span>
+        </label>
+        <select id="setTimeoutMs" class="input">
+          <option value="5000">5 s</option>
+          <option value="12000">12 s (default)</option>
+          <option value="30000">30 s</option>
+          <option value="60000">60 s</option>
+          <option value="120000">120 s</option>
+        </select>
+      </div>
+
+      <div class="modal-row">
+        <label for="setMaxResults">
+          <span data-i18n="settingMaxResults">Max results</span>
+          <span class="hint" data-i18n="settingMaxResultsHint">Stop collecting matches after this count.</span>
+        </label>
+        <select id="setMaxResults" class="input">
+          <option value="100">100</option>
+          <option value="300">300 (default)</option>
+          <option value="500">500</option>
+          <option value="1000">1000</option>
+          <option value="2000">2000</option>
+        </select>
+      </div>
+
+      <div class="modal-row">
+        <label for="setMaxFilesize">
+          <span data-i18n="settingMaxFilesize">Max file size</span>
+          <span class="hint" data-i18n="settingMaxFilesizeHint">Skip files larger than this size.</span>
+        </label>
+        <select id="setMaxFilesize" class="input">
+          <option value="500K">500 KB</option>
+          <option value="1M">1 MB (default)</option>
+          <option value="5M">5 MB</option>
+          <option value="10M">10 MB</option>
+        </select>
+      </div>
+
+      <div class="modal-footer">
+        <button id="settingsResetBtn" class="btn" data-i18n="settingsReset">Reset defaults</button>
+        <button id="settingsSaveBtn" class="btn primary" data-i18n="settingsSave">Save</button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

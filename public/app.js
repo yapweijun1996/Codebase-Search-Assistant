@@ -6,7 +6,48 @@ const languageSelect = $('languageSelect');
 const savedRoot = localStorage.getItem('codeSearchRoot') || '';
 const savedLanguage = localStorage.getItem('codeSearchLang') || 'en';
 const savedMaxFiles = localStorage.getItem('codeSearchMaxFiles') || '25';
+const savedQuery = localStorage.getItem('codeSearchQuery') || '';
 rootInput.value = savedRoot;
+
+const SETTINGS_DEFAULTS = { timeoutMs: 12000, maxResults: 300, maxFilesize: '1M' };
+let searchSettings = { ...SETTINGS_DEFAULTS };
+try {
+  const stored = JSON.parse(localStorage.getItem('codeSearchSettings') || '{}');
+  Object.assign(searchSettings, stored);
+} catch (_) {}
+
+function saveSearchSettings() {
+  localStorage.setItem('codeSearchSettings', JSON.stringify(searchSettings));
+}
+
+function applySettingsToModal() {
+  $('setTimeoutMs').value = String(searchSettings.timeoutMs);
+  $('setMaxResults').value = String(searchSettings.maxResults);
+  $('setMaxFilesize').value = searchSettings.maxFilesize;
+}
+
+$('settingsBtn').addEventListener('click', () => {
+  applySettingsToModal();
+  $('settingsModal').classList.remove('hidden');
+});
+
+$('settingsModal').addEventListener('click', (e) => {
+  if (e.target === $('settingsModal')) $('settingsModal').classList.add('hidden');
+});
+
+$('settingsSaveBtn').addEventListener('click', () => {
+  searchSettings.timeoutMs = Number($('setTimeoutMs').value);
+  searchSettings.maxResults = Number($('setMaxResults').value);
+  searchSettings.maxFilesize = $('setMaxFilesize').value;
+  saveSearchSettings();
+  $('settingsModal').classList.add('hidden');
+});
+
+$('settingsResetBtn').addEventListener('click', () => {
+  searchSettings = { ...SETTINGS_DEFAULTS };
+  saveSearchSettings();
+  applySettingsToModal();
+});
 
 const translations = {
   en: {
@@ -77,7 +118,16 @@ const translations = {
     installing: 'Installing... (may take up to 2 min)',
     installOk: 'Installed! Reloading...',
     installRestart: 'Installed — restart the server then refresh.',
-    installFail: 'Install failed: {msg}'
+    installFail: 'Install failed: {msg}',
+    settingsTitle: 'Search Settings',
+    settingTimeout: 'Search timeout',
+    settingTimeoutHint: 'Stop search after this duration to protect disk I/O.',
+    settingMaxResults: 'Max results',
+    settingMaxResultsHint: 'Stop collecting matches after this count.',
+    settingMaxFilesize: 'Max file size',
+    settingMaxFilesizeHint: 'Skip files larger than this size.',
+    settingsReset: 'Reset defaults',
+    settingsSave: 'Save'
   },
   zh: {
     appTitle: '代码库搜索助手',
@@ -147,7 +197,16 @@ const translations = {
     installing: '安装中...（最多需要 2 分钟）',
     installOk: '安装成功！正在刷新...',
     installRestart: '已安装 — 重启服务器后刷新页面。',
-    installFail: '安装失败：{msg}'
+    installFail: '安装失败：{msg}',
+    settingsTitle: '搜索设置',
+    settingTimeout: '搜索超时',
+    settingTimeoutHint: '超过此时间自动停止，保护磁盘 I/O。',
+    settingMaxResults: '最大结果数',
+    settingMaxResultsHint: '达到此数量后停止收集匹配项。',
+    settingMaxFilesize: '最大文件大小',
+    settingMaxFilesizeHint: '跳过超过此大小的文件。',
+    settingsReset: '恢复默认',
+    settingsSave: '保存'
   }
 };
 
@@ -541,7 +600,9 @@ async function runSearch() {
         caseSensitive: $('caseSensitive').checked,
         deepSearch: $('deepSearch').checked,
         context: Number($('contextSelect').value),
-        maxResults: 300,
+        maxResults: searchSettings.maxResults,
+        maxFilesize: searchSettings.maxFilesize,
+        timeoutMs: searchSettings.timeoutMs,
         maxFiles: Number($('maxFilesSelect').value)
       }),
       signal: controller.signal

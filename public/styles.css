@@ -282,6 +282,34 @@ code {
   border-radius: 12px;
 }
 
+.match-highlight {
+  background: #facc15;
+  color: #111827;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+.search-history {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.history-chip {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-chip:hover { border-color: var(--primary); color: var(--primary); }
+
 .tooltip {
   position: fixed;
   z-index: 9999;
@@ -299,6 +327,50 @@ code {
   white-space: normal;
 }
 .tooltip.visible { opacity: 1; }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.hidden { display: none !important; }
+.modal {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 24px;
+  min-width: 340px;
+  max-width: 95vw;
+  box-shadow: 0 8px 32px rgba(0,0,0,.2);
+}
+.modal h2 { margin: 0 0 18px; font-size: 18px; }
+.modal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.modal-row label { font-weight: 600; flex: 1; }
+.modal-row .hint { font-size: 11px; color: var(--muted); display: block; font-weight: 400; }
+.modal-row select { width: 140px; }
+.modal-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.btn.icon-btn {
+  padding: 8px 10px;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 8px;
+}
 
 @media (max-width: 860px) {
   .layout { grid-template-columns: 1fr; }
