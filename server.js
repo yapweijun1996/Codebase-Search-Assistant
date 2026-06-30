@@ -605,7 +605,7 @@ app.post('/api/search', (req, res) => {
     if (settled) return;
     settled = true;
     clearTimeout(timer);
-    req.off('close', onClose);
+    res.off('close', onClose);
     send('done', {
       ...payload,
       fileCount: uniqueFiles.size,
@@ -620,8 +620,8 @@ app.post('/api/search', (req, res) => {
     finish({ ok: true, count, truncated: true, timedOut: true });
   }, COMMAND_TIMEOUT_MS);
 
-  const onClose = () => { child.kill(); finish({ ok: false, canceled: true, count }); };
-  req.on('close', onClose);
+  const onClose = () => { if (!res.writableEnded) { child.kill(); finish({ ok: false, canceled: true, count }); } };
+  res.on('close', onClose);
 
   child.stdout.on('data', (chunk) => {
     pending += chunk.toString('utf8');
@@ -892,7 +892,7 @@ app.post('/api/install-rg', (req, res) => {
     res.end();
   });
 
-  req.on('close', () => { clearTimeout(timer); child.kill(); });
+  res.on('close', () => { if (!res.writableEnded) { clearTimeout(timer); child.kill(); } });
 });
 
 app.listen(PORT, HOST, () => {
