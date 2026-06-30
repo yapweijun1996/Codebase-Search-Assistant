@@ -151,6 +151,61 @@ const translations = {
   }
 };
 
+// ─── Tooltip SSOT ────────────────────────────────────────────────────────────
+// One place to define help text for every interactive element.
+// Keys that start with "tab-" map to .tab[data-tab="<rest>"] buttons.
+const TOOLTIPS = {
+  en: {
+    languageSelect:   'Language — switch UI between English and 中文.',
+    statusBox:        'Status — shows whether ripgrep (rg) is installed and reachable in PATH.',
+    rootInput:        'Project root folder — the directory ripgrep will search inside.',
+    browseRootBtn:    'Browse — open the native OS folder picker to choose your project folder.',
+    openRootBtn:      'Open — reveal the selected folder in Explorer / Finder.',
+    saveRootBtn:      'Save folder — persist this path in localStorage so it reloads on next visit.',
+    installRgBtn:     'Auto Install — runs winget (Windows) / brew (Mac) / apt-get (Linux) to install ripgrep automatically.',
+    'tab-search':     'Search tab — full-text keyword search across all project files using ripgrep.',
+    'tab-impact':     'Impact Check tab — find every file that references a target file, function, or keyword. Helps estimate blast radius before a change.',
+    'tab-git':        'Git Risk Check tab — run git diff --name-only HEAD, then score each changed file by how widely it is referenced.',
+    searchInput:      'Search keyword — enter any text, function name, route, table name, or regex pattern.',
+    caseSensitive:    'Case sensitive — when checked, matches must have exactly the same letter casing.',
+    deepSearch:       'Deep search — include hidden files and override .gitignore rules. Useful for config/env files. Slower on large repos.',
+    contextSelect:    'Context lines — show N lines above and below each match to give surrounding code context.',
+    maxFilesSelect:   'Max files — ripgrep stops after reaching this many unique files. Lower = faster. "All files" scans everything.',
+    searchBtn:        'Search — start the ripgrep scan. Results stream in as files are found.',
+    cancelSearchBtn:  'Cancel — kill the running ripgrep process immediately.',
+    impactInput:      'Target — enter a filename (e.g. inc_auth.cfm), function name, or any keyword to trace all usages.',
+    impactBtn:        'Analyze Impact — searches the project for the target and its basename, classifies risk (HIGH/MEDIUM/LOW) by usage count and path hints.',
+    cancelImpactBtn:  'Cancel — stop the impact analysis.',
+    gitRiskBtn:       'Scan Git Changes — reads git diff, then ripgrep-searches for each changed filename to count references and suggest test areas.',
+    cancelGitBtn:     'Cancel — stop the Git risk scan.',
+  },
+  zh: {
+    languageSelect:   '语言 — 切换界面语言（English / 中文）。',
+    statusBox:        '状态 — 显示 ripgrep (rg) 是否已安装并在 PATH 中。',
+    rootInput:        '项目根目录 — ripgrep 将在此目录内搜索。',
+    browseRootBtn:    '浏览 — 打开系统目录选择窗口选择项目目录。',
+    openRootBtn:      '打开 — 在资源管理器 / Finder 中显示所选目录。',
+    saveRootBtn:      '保存目录 — 将此路径保存到 localStorage，下次访问自动加载。',
+    installRgBtn:     '自动安装 — 运行 winget / brew / apt-get 自动安装 ripgrep。',
+    'tab-search':     '搜索标签 — 用 ripgrep 在所有项目文件中全文搜索关键字。',
+    'tab-impact':     '影响检查标签 — 查找所有引用目标文件、函数或关键字的文件，评估改动影响范围。',
+    'tab-git':        'Git 风险检查标签 — 运行 git diff，按引用次数对每个改动文件评分排序。',
+    searchInput:      '搜索关键字 — 输入任意文本、函数名、路由、表名或正则表达式。',
+    caseSensitive:    '区分大小写 — 勾选后严格匹配字母大小写。',
+    deepSearch:       '深度搜索 — 包含隐藏文件并忽略 .gitignore。适合查配置/环境文件，但在大仓库较慢。',
+    contextSelect:    '上下文行 — 在每个匹配行前后显示 N 行，便于理解代码上下文。',
+    maxFilesSelect:   '文件数限制 — 达到 N 个文件后 ripgrep 停止搜索。越小越快。"All" 扫描全部。',
+    searchBtn:        '搜索 — 开始 ripgrep 扫描，结果边找边流式显示。',
+    cancelSearchBtn:  '取消 — 立即终止 ripgrep 进程。',
+    impactInput:      '目标 — 输入文件名（如 inc_auth.cfm）、函数名或任意关键字，追踪所有引用位置。',
+    impactBtn:        '分析影响 — 搜索目标及其文件名，按使用次数和路径判断风险（HIGH/MEDIUM/LOW）。',
+    cancelImpactBtn:  '取消 — 停止影响分析。',
+    gitRiskBtn:       '扫描 Git 修改 — 读取 git diff，再用 ripgrep 统计每个改动文件的引用次数并给出测试建议。',
+    cancelGitBtn:     '取消 — 停止 Git 风险扫描。',
+  }
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 let currentLanguage = savedLanguage;
 const activeRequests = {
   search: null,
@@ -728,6 +783,43 @@ $('installRgBtn').addEventListener('click', async () => {
   }
 });
 
+// ─── Tooltip engine ──────────────────────────────────────────────────────────
+const tooltipEl = $('tooltip');
+
+function positionTooltip(e) {
+  const gap = 16;
+  const tw = tooltipEl.offsetWidth;
+  const th = tooltipEl.offsetHeight;
+  let x = e.clientX + gap;
+  let y = e.clientY + gap;
+  if (x + tw > window.innerWidth - 8)  x = e.clientX - tw - gap;
+  if (y + th > window.innerHeight - 8) y = e.clientY - th - gap;
+  tooltipEl.style.left = `${x}px`;
+  tooltipEl.style.top  = `${y}px`;
+}
+
+document.addEventListener('mousemove', (e) => {
+  if (tooltipEl.classList.contains('visible')) positionTooltip(e);
+});
+
+function attachTooltips() {
+  Object.keys(TOOLTIPS.en).forEach((key) => {
+    const el = key.startsWith('tab-')
+      ? document.querySelector(`.tab[data-tab="${key.slice(4)}"]`)
+      : $(key);
+    if (!el) return;
+    el.addEventListener('mouseenter', (e) => {
+      const text = (TOOLTIPS[currentLanguage] || TOOLTIPS.en)[key];
+      if (!text) return;
+      tooltipEl.textContent = text;
+      tooltipEl.classList.add('visible');
+      positionTooltip(e);
+    });
+    el.addEventListener('mouseleave', () => tooltipEl.classList.remove('visible'));
+  });
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // restore max-files preference
 const maxFilesSelect = $('maxFilesSelect');
 if (maxFilesSelect) {
@@ -738,6 +830,7 @@ if (maxFilesSelect) {
   });
 }
 
+attachTooltips();
 applyI18n();
 loadConfig();
 checkHealth();

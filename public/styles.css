@@ -282,6 +282,24 @@ code {
   border-radius: 12px;
 }
 
+.tooltip {
+  position: fixed;
+  z-index: 9999;
+  background: #111827;
+  color: #f3f4f6;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 300px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,.3);
+  white-space: normal;
+}
+.tooltip.visible { opacity: 1; }
+
 @media (max-width: 860px) {
   .layout { grid-template-columns: 1fr; }
   .sidebar { border-right: 0; border-bottom: 1px solid var(--border); }
