@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "check": "node --check server.js && node --check public/app.js && node --check scripts/smoke-test.js",
+    "check": "node --check server.js && node --check scripts/smoke-test.js && node --check public/app.js && node --check public/state.js && node --check public/core/store.js && node --check public/core/dom.js && node --check public/core/storage.js && node --check public/core/i18n.js && node --check public/core/format.js && node --check public/core/ui.js && node --check public/core/api.js && node --check public/components/topbar.js && node --check public/components/sidebar.js && node --check public/components/content.js && node --check public/components/settings-modal.js && node --check public/components/tooltip.js",
     "smoke": "node scripts/smoke-test.js"
   },
   "keywords": [
