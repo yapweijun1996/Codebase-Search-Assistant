@@ -203,12 +203,43 @@ code {
 .result-head {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 10px;
   padding: 10px 12px;
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
 .path { word-break: break-all; }
-.line-number { color: var(--muted); margin-left: 8px; }
+.match-count { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.line-row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: stretch;
+  border-top: 1px solid var(--border);
+}
+.line-row:first-child { border-top: none; }
+.line-row .line-number {
+  padding: 8px 6px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.line-row .code-line {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--code);
+  color: #e5e7eb;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  font-size: 13px;
+}
+.line-row .open-btn { margin: 6px; align-self: center; }
 .code-line {
   margin: 0;
   padding: 12px;

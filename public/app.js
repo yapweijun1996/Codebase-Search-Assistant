@@ -365,22 +365,8 @@ function renderResults(targetId, results) {
     return;
   }
 
-  const template = $('resultTemplate');
-  results.slice(0, 500).forEach((item) => {
-    const node = template.content.cloneNode(true);
-    node.querySelector('.path').textContent = item.relativePath || item.path;
-    node.querySelector('.line-number').textContent = `${t('line')} ${item.lineNumber || '-'}`;
-    node.querySelector('.code-line').textContent = item.line || '';
-    node.querySelector('.open-btn').textContent = t('openVscode');
-    node.querySelector('.open-btn').addEventListener('click', async () => {
-      try {
-        await api('/api/open-vscode', { root: rootInput.value, filePath: item.path, lineNumber: item.lineNumber });
-      } catch (err) {
-        alert(err.message);
-      }
-    });
-    container.appendChild(node);
-  });
+  const fileGroups = new Map();
+  results.slice(0, 500).forEach((item) => appendResultToGroup(container, item, fileGroups));
 }
 
 $('searchBtn').addEventListener('click', runSearch);
@@ -389,19 +375,62 @@ $('searchInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') runSearch();
 });
 
-function appendResultCard(container, item) {
-  const template = $('resultTemplate');
-  const node = template.content.cloneNode(true);
-  node.querySelector('.path').textContent = item.relativePath || item.path;
-  node.querySelector('.line-number').textContent = `${t('line')} ${item.lineNumber || '-'}`;
-  node.querySelector('.code-line').textContent = item.line || '';
-  node.querySelector('.open-btn').textContent = t('openVscode');
-  node.querySelector('.open-btn').addEventListener('click', async () => {
+function appendResultToGroup(container, item, fileGroups) {
+  const key = item.relativePath || item.path;
+
+  if (!fileGroups.has(key)) {
+    const card = document.createElement('article');
+    card.className = 'result-card';
+
+    const head = document.createElement('div');
+    head.className = 'result-head';
+
+    const pathEl = document.createElement('strong');
+    pathEl.className = 'path';
+    pathEl.textContent = key;
+
+    const countEl = document.createElement('span');
+    countEl.className = 'match-count';
+
+    head.appendChild(pathEl);
+    head.appendChild(countEl);
+    card.appendChild(head);
+
+    const linesEl = document.createElement('div');
+    card.appendChild(linesEl);
+
+    container.appendChild(card);
+    fileGroups.set(key, { linesEl, countEl, count: 0 });
+  }
+
+  const group = fileGroups.get(key);
+  group.count++;
+  group.countEl.textContent = `${group.count} match${group.count > 1 ? 'es' : ''}`;
+
+  const row = document.createElement('div');
+  row.className = 'line-row';
+
+  const lineNum = document.createElement('span');
+  lineNum.className = 'line-number';
+  lineNum.textContent = item.lineNumber || '-';
+
+  const codeLine = document.createElement('pre');
+  codeLine.className = 'code-line';
+  codeLine.textContent = item.line || '';
+
+  const openBtn = document.createElement('button');
+  openBtn.className = 'btn small-btn open-btn';
+  openBtn.textContent = t('openVscode');
+  openBtn.addEventListener('click', async () => {
     try {
       await api('/api/open-vscode', { root: rootInput.value, filePath: item.path, lineNumber: item.lineNumber });
     } catch (err) { alert(err.message); }
   });
-  container.appendChild(node);
+
+  row.appendChild(lineNum);
+  row.appendChild(codeLine);
+  row.appendChild(openBtn);
+  group.linesEl.appendChild(row);
 }
 
 async function runSearch() {
@@ -414,6 +443,7 @@ async function runSearch() {
   toastSummary('searchSummary', [{ text: t('searching') }]);
 
   let liveCount = 0;
+  const fileGroups = new Map();
 
   try {
     const res = await fetch('/api/search', {
@@ -461,7 +491,7 @@ async function runSearch() {
         if (event === 'result') {
           liveCount++;
           toastSummary('searchSummary', [{ text: t('matches', { count: liveCount }) + '…' }]);
-          appendResultCard(resultsDiv, data);
+          appendResultToGroup(resultsDiv, data, fileGroups);
         } else if (event === 'done') {
           if (data.rgMissing) {
             showError('searchResults', 'ripgrep / rg is not installed or not available in PATH.');
