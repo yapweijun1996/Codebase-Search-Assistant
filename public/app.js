@@ -5,7 +5,7 @@ const languageSelect = $('languageSelect');
 
 const savedRoot = localStorage.getItem('codeSearchRoot') || '';
 const savedLanguage = localStorage.getItem('codeSearchLang') || 'en';
-const savedMaxFiles = localStorage.getItem('codeSearchMaxFiles') || '100';
+const savedMaxFiles = localStorage.getItem('codeSearchMaxFiles') || '25';
 rootInput.value = savedRoot;
 
 const translations = {
