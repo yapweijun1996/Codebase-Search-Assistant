@@ -8,7 +8,10 @@ const app = express();
 const PORT = process.env.PORT || 3123;
 const HOST = process.env.HOST || '127.0.0.1';
 const COMMAND_TIMEOUT_MS = Number(process.env.COMMAND_TIMEOUT_MS || 12000);
-const RG_THREADS = Math.max(1, Math.min(Number(process.env.RG_THREADS || 1), 4));
+const RG_THREADS = Math.max(1, Math.min(
+  process.env.RG_THREADS ? Number(process.env.RG_THREADS) : Math.max(1, os.cpus().length - 1),
+  8
+));
 const RG_MAX_FILESIZE = process.env.RG_MAX_FILESIZE || '1M';
 const GIT_RISK_MAX_FILES = Math.max(1, Math.min(Number(process.env.GIT_RISK_MAX_FILES || 20), 80));
 const DEFAULT_ROOT = path.resolve(process.env.DEFAULT_ROOT || process.cwd());
@@ -26,6 +29,30 @@ const DEFAULT_GLOBS = [
   '*.sql', '*.json', '*.md', '*.py', '*.java', '*.cs', '*.php', '*.rb', '*.go', '*.rs',
   '*.yml', '*.yaml', '*.xml'
 ];
+
+const searchCache = new Map();
+const CACHE_TTL_MS = 30_000;
+const CACHE_MAX_SIZE = 20;
+
+function makeCacheKey(root, params) {
+  return JSON.stringify({ root, ...params });
+}
+
+function getCached(key) {
+  const entry = searchCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) { searchCache.delete(key); return null; }
+  return entry.data;
+}
+
+function setCache(key, data) {
+  if (searchCache.size >= CACHE_MAX_SIZE) {
+    const oldest = [...searchCache.entries()].sort((a, b) => a[1].ts - b[1].ts)[0];
+    searchCache.delete(oldest[0]);
+  }
+  searchCache.set(key, { ts: Date.now(), data });
+}
+
 const HIGH_RISK_HINTS = [
   'common', 'include', 'includes', 'inc', 'core', 'utils', 'util', 'layout', 'security',
   'auth', 'session', 'db', 'database', 'header', 'footer', 'menu', 'global', 'shared', 'template'
@@ -438,10 +465,12 @@ function runRgSearch(root, args, options = {}) {
 
 function inferModulesFromResults(results) {
   const found = new Set();
+  const total = MODULE_HINTS.length;
   for (const item of results) {
+    if (found.size === total) break;
     const haystack = `${item.relativePath || ''} ${item.line || ''}`.toLowerCase().replace(/\\/g, '/');
     for (const moduleHint of MODULE_HINTS) {
-      if (moduleHint.names.some((name) => haystack.includes(name.toLowerCase().replace(/\\/g, '/')))) {
+      if (!found.has(moduleHint.key) && moduleHint.names.some((name) => haystack.includes(name.toLowerCase().replace(/\\/g, '/')))) {
         found.add(moduleHint.key);
       }
     }
@@ -605,6 +634,23 @@ app.post('/api/search', (req, res) => {
     excludePatterns: Array.isArray(excludePatterns) ? excludePatterns : []
   });
 
+  const cacheKey = makeCacheKey(resolvedRoot, {
+    query: String(query).trim(),
+    caseSensitive: !!caseSensitive, context,
+    maxResults: maxRes, maxFiles: Number(maxFiles) || 0,
+    deepSearch: !!deepSearch, maxFilesize: maxFilesize || RG_MAX_FILESIZE,
+    fixedStrings: !!fixedStrings,
+    excludePatterns: Array.isArray(excludePatterns) ? excludePatterns.slice().sort() : [],
+    globs: (Array.isArray(globs) && globs.length ? globs : DEFAULT_GLOBS).slice().sort()
+  });
+  const cachedSearch = getCached(cacheKey);
+  if (cachedSearch) {
+    for (const item of cachedSearch.results) send('result', item);
+    send('done', { ...cachedSearch.meta, durationMs: 0, cached: true });
+    res.end();
+    return;
+  }
+
   let pending = '';
   let stderr = '';
   let count = 0;
@@ -621,12 +667,16 @@ app.post('/api/search', (req, res) => {
     settled = true;
     clearTimeout(timer);
     res.off('close', onClose);
-    send('done', {
+    const meta = {
       ...payload,
       fileCount: uniqueFiles.size,
       modules: inferModulesFromResults(allResults),
       durationMs: Date.now() - startedAt
-    });
+    };
+    if (meta.ok && !meta.canceled && !meta.timedOut) {
+      setCache(cacheKey, { results: [...allResults], meta });
+    }
+    send('done', meta);
     res.end();
   };
 
@@ -696,22 +746,22 @@ app.post('/api/impact', async (req, res) => {
   const rawTarget = String(target).trim();
   const targetBase = path.basename(rawTarget);
   const searches = Array.from(new Set([rawTarget, targetBase].filter(Boolean)));
-  let allResults = [];
 
-  for (const q of searches) {
-    if (signal.aborted) return sendJson(res, 499, { ok: false, canceled: true, message: 'Request canceled.' });
-    const output = await searchWithRg(resolvedRoot, {
-      query: q,
-      globs: globs && globs.length ? globs : DEFAULT_GLOBS,
-      caseSensitive: false,
-      context: 0,
-      maxResults: 300,
-      deepSearch: false
-    }, signal);
+  if (signal.aborted) return sendJson(res, 499, { ok: false, canceled: true, message: 'Request canceled.' });
+  const outputs = await Promise.all(searches.map((q) => searchWithRg(resolvedRoot, {
+    query: q,
+    globs: globs && globs.length ? globs : DEFAULT_GLOBS,
+    caseSensitive: false,
+    context: 0,
+    maxResults: 300,
+    deepSearch: false
+  }, signal)));
+
+  for (const output of outputs) {
     if (output.canceled) return sendJson(res, 499, output);
     if (!output.ok) return sendJson(res, 500, output);
-    allResults = allResults.concat(output.results);
   }
+  const allResults = outputs.flatMap((o) => o.results);
 
   const dedup = new Map();
   for (const item of allResults) {
@@ -754,38 +804,35 @@ app.post('/api/git-risk', async (req, res) => {
   }
 
   const changedFiles = gitResult.stdout.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+  const filesToScan = changedFiles.slice(0, GIT_RISK_MAX_FILES);
+  const GIT_CONCURRENCY = 4;
   const details = [];
 
-  for (const rel of changedFiles.slice(0, GIT_RISK_MAX_FILES)) {
+  for (let i = 0; i < filesToScan.length; i += GIT_CONCURRENCY) {
     if (signal.aborted) return sendJson(res, 499, { ok: false, canceled: true, message: 'Request canceled.' });
-    const base = path.basename(rel);
-    let usageCount = 0;
-    let modules = [];
-
-    if (base) {
-      const output = await searchWithRg(resolvedRoot, {
-        query: base,
-        globs: globs && globs.length ? globs : DEFAULT_GLOBS,
-        caseSensitive: false,
-        context: 0,
-        maxResults: 300,
-        deepSearch: false
-      }, signal);
-      if (output.canceled) return sendJson(res, 499, output);
-      if (output.ok) {
-        usageCount = output.results.length;
-        modules = inferModulesFromResults(output.results);
+    const chunk = filesToScan.slice(i, i + GIT_CONCURRENCY);
+    const chunkDetails = await Promise.all(chunk.map(async (rel) => {
+      const base = path.basename(rel);
+      let usageCount = 0;
+      let modules = [];
+      if (base) {
+        const output = await searchWithRg(resolvedRoot, {
+          query: base,
+          globs: globs && globs.length ? globs : DEFAULT_GLOBS,
+          caseSensitive: false,
+          context: 0,
+          maxResults: 300,
+          deepSearch: false
+        }, signal);
+        if (output.ok) {
+          usageCount = output.results.length;
+          modules = inferModulesFromResults(output.results);
+        }
       }
-    }
-
-    const risk = classifyRisk(rel, usageCount);
-    details.push({
-      file: rel,
-      usageCount,
-      modules,
-      risk,
-      suggestedTests: suggestTests(rel, modules, risk)
-    });
+      const risk = classifyRisk(rel, usageCount);
+      return { file: rel, usageCount, modules, risk, suggestedTests: suggestTests(rel, modules, risk) };
+    }));
+    details.push(...chunkDetails);
   }
 
   details.sort((a, b) => riskRank(b.risk) - riskRank(a.risk));

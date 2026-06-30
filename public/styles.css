@@ -10,6 +10,8 @@
   --warning: #d97706;
   --success: #059669;
   --code: #0f172a;
+  --header-h: 56px;
+  --sidebar-w: 290px;
 }
 
 * { box-sizing: border-box; }
@@ -22,15 +24,20 @@ body {
 }
 
 .app-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--header-h);
+  z-index: 500;
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px 22px;
+  padding: 0 22px;
   background: var(--card);
   border-bottom: 1px solid var(--border);
 }
-.app-header h1 { margin: 0; font-size: 22px; }
-.app-header p { margin: 6px 0 0; color: var(--muted); }
+.app-header h1 { margin: 0; font-size: 18px; }
+.app-header p { display: none; }
 .status {
   align-self: center;
   padding: 8px 12px;
@@ -49,16 +56,27 @@ body {
 .hidden { display: none !important; }
 
 .layout {
-  display: grid;
-  grid-template-columns: 290px 1fr;
-  min-height: calc(100vh - 78px);
+  display: block;
+  margin-top: var(--header-h);
+  margin-left: var(--sidebar-w);
+  min-height: calc(100vh - var(--header-h));
+  transition: margin-left 0.25s ease;
 }
 .sidebar {
+  position: fixed;
+  top: var(--header-h);
+  left: 0;
+  width: var(--sidebar-w);
+  height: calc(100vh - var(--header-h));
+  overflow-y: auto;
+  z-index: 300;
   padding: 18px;
   border-right: 1px solid var(--border);
   background: #f8fafc;
+  transform: translateX(0);
+  transition: transform 0.25s ease;
 }
-.content { padding: 18px; overflow: auto; }
+.content { padding: 18px; }
 
 .field-label { display: block; margin-bottom: 6px; font-weight: 700; }
 .input {
@@ -381,8 +399,8 @@ code {
   margin-bottom: 8px;
 }
 .sidebar-top-bar .field-label { margin-bottom: 0; }
-.layout.sidebar-hidden { grid-template-columns: 1fr; }
-.layout.sidebar-hidden .sidebar { display: none; }
+.layout.sidebar-hidden { margin-left: 0; }
+.layout.sidebar-hidden .sidebar { transform: translateX(-100%); }
 .sidebar-expand-btn {
   position: fixed;
   left: 0;
@@ -431,6 +449,7 @@ code {
   color-scheme: dark;
 }
 .dark body { background: var(--bg); color: var(--text); }
+.dark .app-header { background: var(--card); border-bottom-color: var(--border); }
 .dark .sidebar { background: #162032; }
 .dark .input { background: #1e293b; color: var(--text); border-color: var(--border); }
 .dark .btn { background: #1e293b; color: var(--text); border-color: var(--border); }
@@ -464,41 +483,29 @@ code {
 .dark .error { background: #3b0f0f; border-color: #7f1d1d; color: #fca5a5; }
 
 @media (max-width: 860px) {
-  .layout { grid-template-columns: 1fr; }
+  /* Overlay mode: sidebar never pushes content, no margin-left */
+  .layout,
+  .layout.sidebar-hidden { margin-left: 0; }
 
-  /* Sidebar becomes a fixed overlay drawer on mobile */
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 290px;
-    max-width: 85vw;
-    z-index: 300;
-    overflow-y: auto;
-    border-right: 1px solid var(--border);
-    border-bottom: none;
-    transform: translateX(-100%);
-    transition: transform 0.25s ease;
-  }
+  /* Sidebar: full height from header down, max 85vw */
+  .sidebar { max-width: 85vw; }
 
-  /* Sidebar open: slide in */
-  .layout:not(.sidebar-hidden) .sidebar {
-    transform: translateX(0);
-    display: block !important;
-  }
+  /* Sidebar open on mobile: slide in */
+  .layout:not(.sidebar-hidden) .sidebar { transform: translateX(0); }
 
-  /* Sidebar closed: keep in DOM but translate off-screen (override desktop display:none) */
-  .layout.sidebar-hidden .sidebar {
-    display: block !important;
-    transform: translateX(-100%);
-  }
+  /* Sidebar closed on mobile: slide out */
+  .layout.sidebar-hidden .sidebar { transform: translateX(-100%); }
 
   /* Hide the desktop fixed-edge expand button on mobile */
   .sidebar-expand-btn { display: none !important; }
 
+  /* Mobile topbar: truncate title, keep actions on one row */
+  .app-header { overflow: hidden; padding: 0 12px; gap: 8px; }
+  .app-header > div { min-width: 0; flex: 1 1 0; overflow: hidden; }
+  .app-header h1 { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-actions { flex-shrink: 0; flex-wrap: nowrap; gap: 6px; }
+  #statusBox { display: none; }
+
   .toolbar { flex-direction: column; align-items: stretch; }
   .input.small { width: 100%; }
-  .app-header { flex-direction: column; }
-  .header-actions { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px; }
 }

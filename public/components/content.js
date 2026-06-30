@@ -156,6 +156,16 @@ export function mountContent() {
     let liveCount = 0;
     const fileGroups = new Map();
     const streamResults = [];
+    const pendingBatch = [];
+    let batchTimer = null;
+
+    function flushBatch() {
+      batchTimer = null;
+      const items = pendingBatch.splice(0);
+      if (!items.length) return;
+      for (const item of items) appendResultToGroup(resultsDiv, item, fileGroups);
+      toastSummary('searchSummary', [{ text: t('matches', { count: liveCount }) + '…' }]);
+    }
 
     const settings = store.get().settings;
 
@@ -177,9 +187,10 @@ export function mountContent() {
         if (event === 'result') {
           liveCount++;
           streamResults.push(data);
-          toastSummary('searchSummary', [{ text: t('matches', { count: liveCount }) + '…' }]);
-          appendResultToGroup(resultsDiv, data, fileGroups);
+          pendingBatch.push(data);
+          if (!batchTimer) batchTimer = setTimeout(flushBatch, 80);
         } else if (event === 'done') {
+          if (batchTimer !== null) { clearTimeout(batchTimer); flushBatch(); }
           if (data.rgMissing) {
             showError('searchResults', 'ripgrep / rg is not installed or not available in PATH.');
             $('searchSummary').innerHTML = '';
@@ -219,6 +230,7 @@ export function mountContent() {
         $('searchSummary').innerHTML = '';
       }
     } finally {
+      if (batchTimer !== null) { clearTimeout(batchTimer); batchTimer = null; }
       finishRequest('search', controller);
     }
   }
